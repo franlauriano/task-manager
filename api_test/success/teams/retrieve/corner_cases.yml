@@ -1,0 +1,61 @@
+name: Retrieve Team API Test - Success (Corner Cases)
+version: "1.0"
+testcases:
+  - name: Retrieve team - Success (team with special characters)
+    steps:
+      # Step 1: Create a team with special characters
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Equipe com acentos áéíóú",
+            "description": "Descrição com emojis 🎯 👥"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          team_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Retrieve the team and verify special characters are preserved
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson.name ShouldEqual "Equipe com acentos áéíóú"
+          - result.bodyjson.description ShouldEqual "Descrição com emojis 🎯 👥"
+          - result.bodyjson ShouldContainKey "created_at"
+          - result.bodyjson ShouldContainKey "updated_at"
+
+  - name: Retrieve team - Success (team with associated tasks)
+    steps:
+      # Step 1: Retrieve team from seed that has tasks associated (Time de Desenvolvimento)
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/teams/111e4567-e89b-12d3-a456-426614174000"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson.uuid ShouldEqual "111e4567-e89b-12d3-a456-426614174000"
+          - result.bodyjson ShouldContainKey "name"
+          - result.bodyjson ShouldContainKey "description"
+          - result.bodyjson ShouldContainKey "created_at"
+          - result.bodyjson ShouldContainKey "updated_at"
+          - result.bodyjson ShouldContainKey "tasks"
+          - result.bodyjson.tasks ShouldBeArray
+          - result.bodyjson.tasks.__Len__ ShouldEqual 5

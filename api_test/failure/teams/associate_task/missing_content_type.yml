@@ -1,0 +1,16 @@
+name: Associate Task to Team API Test - Missing Content-Type Header
+version: "1.0"
+testcases:
+  - name: Associate task to team - Missing Content-Type header
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams/00000000-0000-0000-0000-000000000000/tasks"
+        headers:
+          Accept: "application/json"
+        body: |
+          {
+            "task_uuid": "00000000-0000-0000-0000-000000000000"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 404

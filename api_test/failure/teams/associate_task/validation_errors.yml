@@ -1,0 +1,181 @@
+name: Associate Task to Team API Test - Validation Errors (422)
+version: "1.0"
+testcases:
+  - name: Associate task to team - Task already associated with another team
+    steps:
+      # Step 1: Create first team
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "First Team",
+            "description": "First team for association test"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          first_team_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Create second team
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Second Team",
+            "description": "Second team for association test"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          second_team_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 3: Create a task
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task for association test",
+            "description": "This task will be associated"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 4: Associate task to first team
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams/{{.first_team_uuid}}/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "task_uuid": "{{.task_uuid}}"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+      
+      # Step 5: Try to associate same task to second team (should fail)
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams/{{.second_team_uuid}}/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "task_uuid": "{{.task_uuid}}"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "task is already associated with another team"
+
+  - name: Associate task to team - Team not found
+    steps:
+      # Step 1: Create a task
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task for association test",
+            "description": "This task will be associated"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Try to associate task to non-existent team
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams/00000000-0000-0000-0000-000000000000/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "task_uuid": "{{.task_uuid}}"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "team not found"
+
+  - name: Associate task to team - Task not found
+    steps:
+      # Step 1: Create a team
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Team for association test",
+            "description": "This team will have a task associated"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          team_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Try to associate non-existent task to team
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "task_uuid": "00000000-0000-0000-0000-000000000000"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "task not found"

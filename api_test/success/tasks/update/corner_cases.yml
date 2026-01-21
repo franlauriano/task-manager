@@ -1,0 +1,52 @@
+name: Update Task API Test - Success (Corner Cases)
+version: "1.0"
+testcases:
+  - name: Update task - Success (idempotency - same values)
+    steps:
+      # Step 1: Create a task first to get a valid UUID
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task Title",
+            "description": "Task description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+          original_title:
+            from: result.bodyjson.title
+            default: ""
+          original_description:
+            from: result.bodyjson.description
+            default: ""
+      
+      # Step 2: Update the task with the same values (idempotency)
+      - type: http
+        method: PUT
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "{{.original_title}}",
+            "description": "{{.original_description}}"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson.title ShouldEqual "{{.original_title}}"
+          - result.bodyjson.description ShouldEqual "{{.original_description}}"
+          - result.bodyjson ShouldContainKey "status"
+          - result.bodyjson ShouldContainKey "updated_at"

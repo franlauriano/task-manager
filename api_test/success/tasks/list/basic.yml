@@ -1,0 +1,49 @@
+name: List Tasks API Test - Success
+version: "1.0"
+testcases:
+  - name: List tasks - Success (without filters)
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "items"
+          - result.bodyjson.items ShouldBeArray
+          - result.bodyjson ShouldContainKey "total_items"
+          - result.bodyjson ShouldContainKey "page"
+          - result.bodyjson ShouldContainKey "items_per_page"
+          - result.bodyjson.items_per_page ShouldEqual 20
+          - result.bodyjson ShouldContainKey "total_pages"
+
+  - name: List tasks - Success (with status filter)
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks?status=to_do"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "items"
+          - result.bodyjson.items ShouldBeArray
+          - result.bodyjson.items_per_page ShouldEqual 20
+
+  - name: List tasks - Success (with pagination)
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks?page=1&limit=10"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "items"
+          - result.bodyjson.items ShouldBeArray
+          - result.bodyjson.page ShouldEqual 1
+          - result.bodyjson.items_per_page ShouldEqual 10

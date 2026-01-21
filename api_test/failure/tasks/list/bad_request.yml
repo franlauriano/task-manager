@@ -1,0 +1,43 @@
+name: List Tasks API Test - Bad Request (400)
+version: "1.0"
+testcases:
+  - name: List tasks - Invalid status filter
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks?status=invalid_status"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "message"
+          - result.bodyjson.message ShouldEqual "invalid status value"
+          - result.bodyjson ShouldContainKey "field"
+          - result.bodyjson.field ShouldEqual "status"
+
+  - name: List tasks - Invalid status filter (empty string with value)
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks?status=unknown"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "message"
+          - result.bodyjson.message ShouldEqual "invalid status value"
+
+  - name: List tasks - Invalid status filter (case sensitive)
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks?status=TO_DO"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "message"
+          - result.bodyjson.message ShouldEqual "invalid status value"

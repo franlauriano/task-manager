@@ -1,0 +1,70 @@
+name: Create Team API Test - Success (Edge Cases)
+version: "1.0"
+testcases:
+  - name: Create team - Success (with long name and description)
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "This is a very long team name that contains multiple words and should still be accepted by the system",
+            "description": "This is a very detailed description of the team that explains what the team does, its purpose, responsibilities, and goals. It can contain multiple sentences and paragraphs to fully describe the team's mission and objectives."
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson ShouldContainKey "name"
+          - result.bodyjson ShouldContainKey "description"
+          - result.bodyjson ShouldContainKey "created_at"
+          - result.bodyjson ShouldContainKey "updated_at"
+
+  - name: Create team - Success (with minimal name and description)
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "A",
+            "description": "B"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson.name ShouldEqual "A"
+          - result.bodyjson.description ShouldEqual "B"
+          - result.bodyjson ShouldContainKey "created_at"
+          - result.bodyjson ShouldContainKey "updated_at"
+
+  - name: Create team - Success (with name exactly 255 characters)
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "description": "Valid description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson ShouldContainKey "name"
+          - result.bodyjson.name ShouldEqual "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          - result.bodyjson ShouldContainKey "description"
+          - result.bodyjson.description ShouldEqual "Valid description"
+          - result.bodyjson ShouldContainKey "created_at"
+          - result.bodyjson ShouldContainKey "updated_at"

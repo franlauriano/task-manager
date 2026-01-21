@@ -1,0 +1,46 @@
+name: Create Team API Test - Success (Corner Cases)
+version: "1.0"
+testcases:
+  - name: Create team - Success (with special characters and Unicode)
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Equipe com acentos áéíóú ção",
+            "description": "Descrição com emojis 🎯 👥 🚀 e caracteres especiais @#$%&*()"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson.name ShouldEqual "Equipe com acentos áéíóú ção"
+          - result.bodyjson.description ShouldEqual "Descrição com emojis 🎯 👥 🚀 e caracteres especiais @#$%&*()"
+          - result.bodyjson ShouldContainKey "created_at"
+          - result.bodyjson ShouldContainKey "updated_at"
+
+  - name: Create team - Success (with control characters that get trimmed)
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "   Team with leading and trailing spaces   ",
+            "description": "\tDescription with tabs and newlines\n"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson.name ShouldEqual "Team with leading and trailing spaces"
+          - result.bodyjson.description ShouldEqual "Description with tabs and newlines"
+          - result.bodyjson ShouldContainKey "created_at"
+          - result.bodyjson ShouldContainKey "updated_at"

@@ -1,0 +1,19 @@
+name: Update Task API Test - Not Found (404)
+version: "1.0"
+testcases:
+  - name: Update task - Task not found
+    steps:
+      - type: http
+        method: PUT
+        url: "{{.base_url}}/api/tasks/00000000-0000-0000-0000-000000000000"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Valid title",
+            "description": "Valid description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 404
+          - result.bodyjson ShouldNotBeNil

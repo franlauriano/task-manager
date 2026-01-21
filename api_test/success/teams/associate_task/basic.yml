@@ -1,0 +1,60 @@
+name: Associate Task to Team API Test - Success
+version: "1.0"
+testcases:
+  - name: Associate task to team - Success
+    steps:
+      # Step 1: Create a team first
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Team for task association",
+            "description": "This team will have a task associated"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          team_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Create a task
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task to associate",
+            "description": "This task will be associated to a team"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 3: Associate task to team
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "task_uuid": "{{.task_uuid}}"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200

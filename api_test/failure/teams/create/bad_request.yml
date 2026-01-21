@@ -1,0 +1,20 @@
+name: Create Team API Test - Bad Request (400)
+version: "1.0"
+testcases:
+  - name: Create team - Invalid JSON syntax
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Test Team"
+            invalid json
+          }
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "message"

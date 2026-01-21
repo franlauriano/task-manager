@@ -1,0 +1,35 @@
+name: Delete Task API Test - Success
+version: "1.0"
+testcases:
+  - name: Delete task - Success
+    steps:
+      # Step 1: Create a task first to get a valid UUID
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task to be deleted",
+            "description": "This task will be deleted"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Delete the task
+      - type: http
+        method: DELETE
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200

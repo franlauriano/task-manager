@@ -1,0 +1,41 @@
+name: Retrieve Task API Test - Success
+version: "1.0"
+testcases:
+  - name: Retrieve task - Success
+    steps:
+      # Step 1: Create a task first to get a valid UUID
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task to retrieve",
+            "description": "This task will be retrieved"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Retrieve the task
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson ShouldContainKey "title"
+          - result.bodyjson ShouldContainKey "description"
+          - result.bodyjson ShouldContainKey "status"
+          - result.bodyjson ShouldContainKey "created_at"
+          - result.bodyjson ShouldContainKey "updated_at"

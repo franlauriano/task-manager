@@ -1,0 +1,15 @@
+# Temporary files
+var/*
+!var/.gitkeep
+
+# Air temporary files
+tmp/
+
+# Environment files
+etc/.env
+
+# Example config file
+etc/config.toml
+
+# Binary files
+bin/*

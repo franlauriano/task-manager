@@ -1,0 +1,70 @@
+name: Disassociate Task from Team API Test - Success
+version: "1.0"
+testcases:
+  - name: Disassociate task from team - Success
+    steps:
+      # Step 1: Create a team first
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Team for task disassociation",
+            "description": "This team will have a task disassociated"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          team_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Create a task
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task to disassociate",
+            "description": "This task will be disassociated from a team"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 3: Associate task to team first
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "task_uuid": "{{.task_uuid}}"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+      
+      # Step 4: Disassociate task from team
+      - type: http
+        method: DELETE
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}/tasks/{{.task_uuid}}"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200

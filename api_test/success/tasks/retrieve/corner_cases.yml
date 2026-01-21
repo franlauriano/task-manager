@@ -1,0 +1,41 @@
+name: Retrieve Task API Test - Success (Corner Cases)
+version: "1.0"
+testcases:
+  - name: Retrieve task - Success (task with special characters)
+    steps:
+      # Step 1: Create a task with special characters
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Tarefa com acentos áéíóú",
+            "description": "Descrição com emojis 🚀 ✅"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Retrieve the task and verify special characters are preserved
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson.title ShouldEqual "Tarefa com acentos áéíóú"
+          - result.bodyjson.description ShouldEqual "Descrição com emojis 🚀 ✅"
+          - result.bodyjson ShouldContainKey "status"
+          - result.bodyjson ShouldContainKey "created_at"
+          - result.bodyjson ShouldContainKey "updated_at"

@@ -1,0 +1,156 @@
+name: Associate Task to Team API Test - Success (Corner Cases)
+version: "1.0"
+testcases:
+  - name: Associate task to team - Success (idempotency - already associated to same team)
+    steps:
+      # Step 1: Create a team first
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Team for idempotency test",
+            "description": "This team will test association idempotency"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          team_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Create a task
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task for idempotency test",
+            "description": "This task will test association idempotency"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 3: Associate task to team (first time)
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "task_uuid": "{{.task_uuid}}"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+      
+      # Step 4: Associate task to team again (idempotency - should return 200)
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "task_uuid": "{{.task_uuid}}"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+
+  - name: Associate task to team - Success (disassociate and associate again)
+    steps:
+      # Step 1: Create a team first
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Team for reassociation test",
+            "description": "This team will test reassociation"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          team_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Create a task
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task for reassociation test",
+            "description": "This task will be reassociated"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 3: Associate task to team
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "task_uuid": "{{.task_uuid}}"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+      
+      # Step 4: Disassociate task from team
+      - type: http
+        method: DELETE
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}/tasks/{{.task_uuid}}"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+      
+      # Step 5: Associate task to team again
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "task_uuid": "{{.task_uuid}}"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200

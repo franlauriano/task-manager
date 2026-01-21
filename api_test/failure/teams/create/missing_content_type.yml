@@ -1,0 +1,17 @@
+name: Create Team API Test - Missing Content-Type Header
+version: "1.0"
+testcases:
+  - name: Create team - Missing Content-Type header
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Test Team",
+            "description": "Test Description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 404

@@ -1,0 +1,12 @@
+name: Disassociate Task from Team API Test - Missing Content-Type Header
+version: "1.0"
+testcases:
+  - name: Disassociate task from team - Missing Content-Type header
+    steps:
+      - type: http
+        method: DELETE
+        url: "{{.base_url}}/api/teams/00000000-0000-0000-0000-000000000000/tasks/00000000-0000-0000-0000-000000000000"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 404

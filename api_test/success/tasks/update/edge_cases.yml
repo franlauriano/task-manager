@@ -1,0 +1,134 @@
+name: Update Task API Test - Success (Edge Cases)
+version: "1.0"
+testcases:
+  - name: Update task - Success (with long title and description)
+    steps:
+      # Step 1: Create a task first to get a valid UUID
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Original Task Title",
+            "description": "Original task description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Update the task with long title and description
+      - type: http
+        method: PUT
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "This is a very long task title that contains multiple words and should still be accepted by the system",
+            "description": "This is a very detailed description of the task that explains what needs to be done, how it should be done, and what the expected outcome is. It can contain multiple sentences and paragraphs."
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson ShouldContainKey "title"
+          - result.bodyjson ShouldContainKey "description"
+          - result.bodyjson ShouldContainKey "status"
+          - result.bodyjson ShouldContainKey "updated_at"
+
+  - name: Update task - Success (with minimal title and description)
+    steps:
+      # Step 1: Create a task first to get a valid UUID
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Original Task Title",
+            "description": "Original task description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Update the task with minimal title and description
+      - type: http
+        method: PUT
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "A",
+            "description": "B"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson.title ShouldEqual "A"
+          - result.bodyjson.description ShouldEqual "B"
+          - result.bodyjson ShouldContainKey "status"
+          - result.bodyjson ShouldContainKey "updated_at"
+
+  - name: Update task - Success (with title exactly 255 characters)
+    steps:
+      # Step 1: Create a task first to get a valid UUID
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Original Task Title",
+            "description": "Original task description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Update the task with title exactly 255 characters
+      - type: http
+        method: PUT
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "description": "Valid description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson.title ShouldEqual "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+          - result.bodyjson.description ShouldEqual "Valid description"
+          - result.bodyjson ShouldContainKey "status"
+          - result.bodyjson ShouldContainKey "updated_at"

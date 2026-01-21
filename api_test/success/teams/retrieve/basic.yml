@@ -1,0 +1,40 @@
+name: Retrieve Team API Test - Success
+version: "1.0"
+testcases:
+  - name: Retrieve team - Success
+    steps:
+      # Step 1: Create a team first to get a valid UUID
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Team to retrieve",
+            "description": "This team will be retrieved"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          team_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Retrieve the team
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson ShouldContainKey "name"
+          - result.bodyjson ShouldContainKey "description"
+          - result.bodyjson ShouldContainKey "created_at"
+          - result.bodyjson ShouldContainKey "updated_at"

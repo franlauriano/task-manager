@@ -1,0 +1,32 @@
+name: Create Task API Test - Success (Basic)
+version: "1.0"
+testcases:
+  - name: Create task - Success (with title and description)
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Test Task",
+            "description": "This is a test task description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson ShouldContainKey "title"
+          - result.bodyjson.title ShouldEqual "Test Task"
+          - result.bodyjson ShouldContainKey "description"
+          - result.bodyjson.description ShouldEqual "This is a test task description"
+          - result.bodyjson ShouldContainKey "status"
+          - result.bodyjson ShouldContainKey "created_at"
+          - result.bodyjson ShouldContainKey "updated_at"
+          - result.body ShouldContainSubstring "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""

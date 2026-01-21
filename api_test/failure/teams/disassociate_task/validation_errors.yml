@@ -1,0 +1,227 @@
+name: Disassociate Task from Team API Test - Validation Errors (422)
+version: "1.0"
+testcases:
+  - name: Disassociate task from team - Task not associated with this team
+    steps:
+      # Step 1: Create first team
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "First Team",
+            "description": "First team for disassociation test"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          first_team_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Create second team
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Second Team",
+            "description": "Second team for disassociation test"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          second_team_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 3: Create a task
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task for disassociation test",
+            "description": "This task will be associated"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 4: Associate task to first team
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams/{{.first_team_uuid}}/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "task_uuid": "{{.task_uuid}}"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+      
+      # Step 5: Try to disassociate task from second team (should fail)
+      - type: http
+        method: DELETE
+        url: "{{.base_url}}/api/teams/{{.second_team_uuid}}/tasks/{{.task_uuid}}"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "task is not associated with this team"
+
+  - name: Disassociate task from team - Task not associated with any team
+    steps:
+      # Step 1: Create a team
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Team for disassociation test",
+            "description": "This team will have a task disassociated"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          team_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Create a task (not associated to any team)
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task for disassociation test",
+            "description": "This task is not associated"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 3: Try to disassociate task that is not associated (should fail)
+      - type: http
+        method: DELETE
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}/tasks/{{.task_uuid}}"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "task is not associated with this team"
+
+  - name: Disassociate task from team - Team not found
+    steps:
+      # Step 1: Create a task
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task for disassociation test",
+            "description": "This task will be disassociated"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Try to disassociate task from non-existent team
+      - type: http
+        method: DELETE
+        url: "{{.base_url}}/api/teams/00000000-0000-0000-0000-000000000000/tasks/{{.task_uuid}}"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "team not found"
+
+  - name: Disassociate task from team - Task not found
+    steps:
+      # Step 1: Create a team
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Team for disassociation test",
+            "description": "This team will have a task disassociated"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          team_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Try to disassociate non-existent task from team
+      - type: http
+        method: DELETE
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}/tasks/00000000-0000-0000-0000-000000000000"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "task not found"

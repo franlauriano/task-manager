@@ -1,0 +1,92 @@
+name: Create Team API Test - Validation Errors (422)
+version: "1.0"
+testcases:
+  - name: Create team - Empty name
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "",
+            "description": "Valid description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+
+  - name: Create team - Empty description
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Valid name",
+            "description": ""
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+
+  - name: Create team - Missing name field
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "description": "Valid description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+
+  - name: Create team - Missing description field
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Valid name"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+
+  - name: Create team - Name exceeding 255 characters
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "description": "Valid description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "name must not exceed 255 characters"

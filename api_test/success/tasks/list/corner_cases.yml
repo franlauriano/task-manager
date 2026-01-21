@@ -1,0 +1,15 @@
+name: List Tasks API Test - Success (Corner Cases)
+version: "1.0"
+testcases:
+  - name: List tasks - Success (multiple page parameters)
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks?page=1&page=2"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "items"
+          - result.bodyjson.items ShouldBeArray

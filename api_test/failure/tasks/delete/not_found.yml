@@ -1,0 +1,14 @@
+name: Delete Task API Test - Not Found (404)
+version: "1.0"
+testcases:
+  - name: Delete task - Task not found
+    steps:
+      - type: http
+        method: DELETE
+        url: "{{.base_url}}/api/tasks/00000000-0000-0000-0000-000000000000"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 404
+          - result.bodyjson ShouldNotBeNil

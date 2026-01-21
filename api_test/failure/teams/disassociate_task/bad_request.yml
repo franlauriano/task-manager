@@ -1,0 +1,26 @@
+name: Disassociate Task from Team API Test - Bad Request (400)
+version: "1.0"
+testcases:
+  - name: Disassociate task from team - Invalid team UUID format
+    steps:
+      - type: http
+        method: DELETE
+        url: "{{.base_url}}/api/teams/invalid-uuid-format/tasks/00000000-0000-0000-0000-000000000000"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson ShouldNotBeNil
+
+  - name: Disassociate task from team - Invalid task UUID format
+    steps:
+      - type: http
+        method: DELETE
+        url: "{{.base_url}}/api/teams/00000000-0000-0000-0000-000000000000/tasks/invalid-uuid-format"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson ShouldNotBeNil

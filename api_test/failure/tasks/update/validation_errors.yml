@@ -1,0 +1,124 @@
+name: Update Task API Test - Validation Errors (422)
+version: "1.0"
+testcases:
+  - name: Update task - Empty title
+    steps:
+      # Step 1: Create a task first to get a valid UUID
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Original Task Title",
+            "description": "Original task description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Try to update with empty title (should fail validation)
+      - type: http
+        method: PUT
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "",
+            "description": "Valid description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+
+  - name: Update task - Empty description
+    steps:
+      # Step 1: Create a task first to get a valid UUID
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Original Task Title",
+            "description": "Original task description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Try to update with empty description (should fail validation)
+      - type: http
+        method: PUT
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Valid title",
+            "description": ""
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+
+  - name: Update task - Title exceeding 255 characters
+    steps:
+      # Step 1: Create a task first to get a valid UUID
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Original Task Title",
+            "description": "Original task description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Try to update with title exceeding 255 characters (should fail validation)
+      - type: http
+        method: PUT
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "description": "Valid description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "title must not exceed 255 characters"

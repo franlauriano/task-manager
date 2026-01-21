@@ -1,0 +1,30 @@
+name: Create Team API Test - Success
+version: "1.0"
+testcases:
+  - name: Create team - Success (with name and description)
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Test Team",
+            "description": "This is a test team description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson ShouldContainKey "name"
+          - result.bodyjson.name ShouldEqual "Test Team"
+          - result.bodyjson ShouldContainKey "description"
+          - result.bodyjson.description ShouldEqual "This is a test team description"
+          - result.bodyjson ShouldContainKey "created_at"
+          - result.bodyjson ShouldContainKey "updated_at"
+        vars:
+          team_uuid:
+            from: result.bodyjson.uuid
+            default: ""

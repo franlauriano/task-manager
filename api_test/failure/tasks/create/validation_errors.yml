@@ -1,0 +1,220 @@
+name: Create Task API Test - Validation Errors (422)
+version: "1.0"
+testcases:
+  - name: Create task - Empty title
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "",
+            "description": "Valid description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "title is required"
+
+  - name: Create task - Empty description
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Valid title",
+            "description": ""
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "description is required"
+
+  - name: Create task - Empty title and description
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "",
+            "description": ""
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "title is required"
+          - result.body ShouldContainSubstring "description is required"
+
+  - name: Create task - Title with only whitespace
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "   ",
+            "description": "Valid description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "title is required"
+
+  - name: Create task - Description with only whitespace
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Valid title",
+            "description": "   "
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "description is required"
+
+  - name: Create task - Title and description with only whitespace
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "   ",
+            "description": "   "
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "title is required"
+          - result.body ShouldContainSubstring "description is required"
+
+  - name: Create task - Title with tab and newline whitespace
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "\t\n\r   ",
+            "description": "Valid description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "title is required"
+
+  - name: Create task - Missing title field
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "description": "Valid description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "title is required"
+
+  - name: Create task - Missing description field
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Valid title"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "description is required"
+
+  - name: Create task - Empty body
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {}
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "title is required"
+          - result.body ShouldContainSubstring "description is required"
+
+  - name: Create task - Title exceeding 255 characters
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+            "description": "Valid description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "title must not exceed 255 characters"

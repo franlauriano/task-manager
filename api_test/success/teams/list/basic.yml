@@ -1,0 +1,20 @@
+name: List Teams API Test - Success
+version: "1.0"
+testcases:
+  - name: List teams - Success
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "items"
+          - result.bodyjson.items ShouldBeArray
+          - result.bodyjson ShouldContainKey "page"
+          - result.bodyjson ShouldContainKey "items_per_page"
+          - result.bodyjson.items_per_page ShouldEqual 10
+          - result.bodyjson ShouldContainKey "total_items"
+          - result.bodyjson ShouldContainKey "total_pages"

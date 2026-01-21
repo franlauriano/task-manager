@@ -1,0 +1,37 @@
+name: Update Task API Test - Bad Request (400)
+version: "1.0"
+testcases:
+  - name: Update task - Invalid JSON syntax
+    steps:
+      - type: http
+        method: PUT
+        url: "{{.base_url}}/api/tasks/invalid-uuid-format"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Test Task"
+            invalid json
+          }
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "message"
+
+  - name: Update task - Invalid UUID format
+    steps:
+      - type: http
+        method: PUT
+        url: "{{.base_url}}/api/tasks/invalid-uuid-format"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Valid title",
+            "description": "Valid description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson ShouldNotBeNil

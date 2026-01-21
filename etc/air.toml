@@ -1,0 +1,69 @@
+# Air configuration for live reload
+# This file configures Air to watch for changes and automatically rebuild/restart the application
+# Note: This file should be executed from the project root directory
+
+root = "."
+testdata_dir = "testdata"
+tmp_dir = "tmp"
+
+[build]
+  # Build command
+  cmd = "go build -o ./tmp/main ./cmd/main.go"
+  # Binary file location
+  bin = "./tmp/main"
+  # Full binary path when running
+  # Load .env file before executing the binary
+  full_bin = "bash -c 'set -a; [ -f etc/.env ] && . etc/.env; set +a; exec ./tmp/main'"
+  # Watch these file extensions
+  include_ext = ["go", "toml", "env"]
+  # Exclude these directories
+  exclude_dir = ["var", "api_test", ".git", "vendor", "tmp", "db"]
+  # Exclude these files
+  exclude_file = []
+  # Delay before restarting (in milliseconds)
+  delay = 500
+  # Log file path
+  log = "tmp/air.log"
+  # Send stop signal to the process before killing it
+  send_interrupt = false
+  # Kill delay after stop signal
+  kill_delay = "0s"
+  # Include regex patterns
+  include_regex = []
+  # Exclude regex patterns
+  exclude_regex = []
+  # Exclude unchanged files
+  exclude_unchanged = false
+  # Follow symlink for directories (set to false to avoid watching parent directories)
+  follow_symlink = false
+  # Poll filesystem for changes
+  poll = false
+  # Poll interval (in milliseconds)
+  poll_interval = 0
+  # Build errors log file
+  error_log = "tmp/air_errors.log"
+  # Stop on build errors
+  stop_on_error = false
+
+[log]
+  # Show time in logs
+  time = false
+  # Show only main log
+  main_only = false
+
+[color]
+  # Customize each part's color
+  main = "magenta"
+  watcher = "cyan"
+  build = "yellow"
+  runner = "green"
+
+[misc]
+  # Delete tmp directory on exit
+  clean_on_exit = false
+
+[screen]
+  # Clear screen on each build
+  clear_on_rebuild = false
+  # Keep scroll on rebuild
+  keep_scroll = true

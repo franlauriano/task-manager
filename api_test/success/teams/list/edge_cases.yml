@@ -1,0 +1,129 @@
+name: List Teams API Test - Success (Edge Cases)
+version: "1.0"
+testcases:
+  - name: List teams - Success (limit equals maximum - limit=20)
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/teams?page=1&limit=20"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "items"
+          - result.bodyjson.items ShouldBeArray
+          - result.bodyjson.page ShouldEqual 1
+          - result.bodyjson.items_per_page ShouldEqual 20
+          - result.bodyjson ShouldContainKey "total_items"
+          - result.bodyjson ShouldContainKey "total_pages"
+
+  - name: List teams - Success (limit exceeds maximum - limit=100)
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/teams?page=1&limit=100"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "items"
+          - result.bodyjson.items ShouldBeArray
+          - result.bodyjson.page ShouldEqual 1
+          - result.bodyjson.items_per_page ShouldEqual 20
+          - result.bodyjson ShouldContainKey "total_items"
+          - result.bodyjson ShouldContainKey "total_pages"
+
+  - name: List teams - Success (minimum limit)
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/teams?page=1&limit=1"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "items"
+          - result.bodyjson.items ShouldBeArray
+          - result.bodyjson.page ShouldEqual 1
+          - result.bodyjson.items_per_page ShouldEqual 1
+          - result.bodyjson ShouldContainKey "total_items"
+          - result.bodyjson ShouldContainKey "total_pages"
+
+  - name: List teams - Success (empty page beyond total)
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/teams?page=99999&limit=10"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "items"
+          - result.bodyjson.items ShouldBeArray
+          - result.bodyjson.page ShouldEqual 99999
+          - result.bodyjson.items_per_page ShouldEqual 10
+          - result.bodyjson.items.__Len__ ShouldEqual 0
+
+  - name: List teams - Success (invalid page parameter - page=0)
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/teams?page=0&limit=10"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "items"
+          - result.bodyjson.items ShouldBeArray
+          - result.bodyjson.page ShouldEqual 1
+          - result.bodyjson.items_per_page ShouldEqual 10
+
+  - name: List teams - Success (invalid limit parameter - limit=0)
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/teams?page=1&limit=0"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "items"
+          - result.bodyjson.items ShouldBeArray
+          - result.bodyjson.page ShouldEqual 1
+          - result.bodyjson.items_per_page ShouldEqual 10
+
+  - name: List teams - Success (limit not provided - uses default)
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/teams?page=1"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "items"
+          - result.bodyjson.items ShouldBeArray
+          - result.bodyjson.page ShouldEqual 1
+          - result.bodyjson.items_per_page ShouldEqual 10
+
+  - name: List teams - Success (negative limit parameter - uses default)
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/teams?page=1&limit=-5"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "items"
+          - result.bodyjson.items ShouldBeArray
+          - result.bodyjson.page ShouldEqual 1
+          - result.bodyjson.items_per_page ShouldEqual 10

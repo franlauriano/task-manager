@@ -1,0 +1,17 @@
+name: Update Task API Test - Missing Content-Type Header
+version: "1.0"
+testcases:
+  - name: Update task - Missing Content-Type header
+    steps:
+      - type: http
+        method: PUT
+        url: "{{.base_url}}/api/tasks/00000000-0000-0000-0000-000000000000"
+        headers:
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Updated Task",
+            "description": "Updated Description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 404

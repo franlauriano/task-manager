@@ -1,0 +1,12 @@
+name: Delete Task API Test - Missing Content-Type Header
+version: "1.0"
+testcases:
+  - name: Delete task - Missing Content-Type header
+    steps:
+      - type: http
+        method: DELETE
+        url: "{{.base_url}}/api/tasks/00000000-0000-0000-0000-000000000000"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 404

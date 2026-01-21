@@ -1,0 +1,57 @@
+name: Create Task API Test - Bad Request (400)
+version: "1.0"
+testcases:
+  - name: Create task - Invalid JSON syntax
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Test Task",
+            "description": "Test Description"
+            invalid json
+          }
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "message"
+
+  - name: Create task - Invalid type for title (number instead of string)
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": 123,
+            "description": "Valid description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "message"
+
+  - name: Create task - Invalid type for description (number instead of string)
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Valid title",
+            "description": 456
+          }
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "message"

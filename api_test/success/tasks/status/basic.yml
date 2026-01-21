@@ -1,0 +1,180 @@
+name: Update Task Status API Test - Success
+version: "1.0"
+testcases:
+  - name: Update task status - Success (to_do to in_progress)
+    steps:
+      # Step 1: Create a task first to get a valid UUID (starts as to_do)
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task for status update",
+            "description": "This task will have its status updated"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson.status ShouldEqual "to_do"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Update task status from to_do to in_progress
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}/status"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "status": "in_progress"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+
+  - name: Update task status - Success (to_do to canceled)
+    steps:
+      # Step 1: Create a task first to get a valid UUID (starts as to_do)
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task for status update",
+            "description": "This task will have its status updated"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+          - result.bodyjson.status ShouldEqual "to_do"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Update task status from to_do to canceled
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}/status"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "status": "canceled"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+
+  - name: Update task status - Success (in_progress to done)
+    steps:
+      # Step 1: Create a task first to get a valid UUID (starts as to_do)
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task for status update",
+            "description": "This task will have its status updated"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Update task status from to_do to in_progress
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}/status"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "status": "in_progress"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+      
+      # Step 3: Update task status from in_progress to done
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}/status"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "status": "done"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+
+  - name: Update task status - Success (in_progress to canceled)
+    steps:
+      # Step 1: Create a task first to get a valid UUID (starts as to_do)
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task for status update",
+            "description": "This task will have its status updated"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Update task status from to_do to in_progress
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}/status"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "status": "in_progress"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+      
+      # Step 3: Update task status from in_progress to canceled
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}/status"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "status": "canceled"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200

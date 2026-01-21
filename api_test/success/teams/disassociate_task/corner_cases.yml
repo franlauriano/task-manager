@@ -1,0 +1,84 @@
+name: Disassociate Task from Team API Test - Success (Corner Cases)
+version: "1.0"
+testcases:
+  - name: Disassociate task from team - Success (disassociate and try again)
+    steps:
+      # Step 1: Create a team first
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Team for disassociation corner case",
+            "description": "This team will test disassociation behavior"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          team_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Create a task
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task for disassociation corner case",
+            "description": "This task will be disassociated"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 3: Associate task to team first
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "task_uuid": "{{.task_uuid}}"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+      
+      # Step 4: Disassociate task from team (first time - should return 200)
+      - type: http
+        method: DELETE
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}/tasks/{{.task_uuid}}"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+      
+      # Step 5: Try to disassociate again (second time - should return 422)
+      - type: http
+        method: DELETE
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}/tasks/{{.task_uuid}}"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+          - result.bodyjson.errors ShouldBeArray
+          - result.body ShouldContainSubstring "task is not associated with this team"

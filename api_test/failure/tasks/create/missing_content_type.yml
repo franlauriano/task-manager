@@ -1,0 +1,17 @@
+name: Create Task API Test - Missing Content-Type Header
+version: "1.0"
+testcases:
+  - name: Create task - Missing Content-Type header
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Test Task",
+            "description": "Test Description"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 404

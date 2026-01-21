@@ -1,0 +1,13 @@
+name: Retrieve Task API Test - Bad Request (400)
+version: "1.0"
+testcases:
+  - name: Retrieve task - Invalid UUID format
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks/invalid-uuid-format"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson ShouldNotBeNil

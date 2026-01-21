@@ -1,0 +1,14 @@
+name: Delete Task API Test - Bad Request (400)
+version: "1.0"
+testcases:
+  - name: Delete task - Invalid UUID format
+    steps:
+      - type: http
+        method: DELETE
+        url: "{{.base_url}}/api/tasks/invalid-uuid-format"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson ShouldNotBeNil

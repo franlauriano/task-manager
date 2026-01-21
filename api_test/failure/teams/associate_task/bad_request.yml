@@ -1,0 +1,115 @@
+name: Associate Task to Team API Test - Bad Request (400)
+version: "1.0"
+testcases:
+  - name: Associate task to team - Invalid team UUID format
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams/invalid-uuid-format/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "task_uuid": "00000000-0000-0000-0000-000000000000"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson ShouldNotBeNil
+
+  - name: Associate task to team - Invalid JSON syntax
+    steps:
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams/00000000-0000-0000-0000-000000000000/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "task_uuid": "00000000-0000-0000-0000-000000000000"
+            invalid json
+          }
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson ShouldNotBeNil
+
+  - name: Associate task to team - Missing task_uuid field
+    steps:
+      # Step 1: Create a team first to get a valid UUID
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Team for validation test",
+            "description": "This team will test validation errors"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          team_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Try to associate without task_uuid field (should fail validation)
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {}
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "field"
+          - result.bodyjson ShouldContainKey "message"
+          - result.bodyjson.field ShouldEqual "task_uuid"
+
+  - name: Associate task to team - Invalid task_uuid format
+    steps:
+      # Step 1: Create a team first to get a valid UUID
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "name": "Team for validation test",
+            "description": "This team will test validation errors"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          team_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Try to associate with invalid task_uuid format (should fail validation)
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/teams/{{.team_uuid}}/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "task_uuid": "invalid-uuid-format"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 400
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "field"
+          - result.bodyjson ShouldContainKey "message"
+          - result.bodyjson.field ShouldEqual "task_uuid"

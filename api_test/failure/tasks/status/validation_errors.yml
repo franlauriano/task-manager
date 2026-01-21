@@ -1,0 +1,78 @@
+name: Update Task Status API Test - Validation Errors (422)
+version: "1.0"
+testcases:
+  - name: Update task status - Invalid status value
+    steps:
+      # Step 1: Create a task first to get a valid UUID
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task for status validation",
+            "description": "This task will test status validation"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Try to update with invalid status (should fail validation)
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}/status"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "status": "invalid_status"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"
+
+  - name: Update task status - Missing status field
+    steps:
+      # Step 1: Create a task first to get a valid UUID
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Task for status validation",
+            "description": "This task will test status validation"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "uuid"
+        vars:
+          task_uuid:
+            from: result.bodyjson.uuid
+            default: ""
+      
+      # Step 2: Try to update without status field (should fail validation)
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks/{{.task_uuid}}/status"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {}
+        assertions:
+          - result.statuscode ShouldEqual 422
+          - result.bodyjson ShouldNotBeNil
+          - result.bodyjson ShouldContainKey "errors"

@@ -1,0 +1,39 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: task-postgres
+    env_file:
+      - ${POSTGRES_ENV_FILE:-./etc/.env}
+    environment:
+      POSTGRES_USER: ${DATABASE_USER}
+      POSTGRES_PASSWORD: ${DATABASE_PASSWORD}
+      POSTGRES_DB: ${DATABASE_NAME}
+    ports:
+      - "${POSTGRES_PORT:-5454}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DATABASE_USER} -d ${DATABASE_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  migrate:
+    image: migrate/migrate:v4.19.1
+    container_name: task-migrate
+    env_file:
+      - ${MIGRATE_ENV_FILE:-./etc/.env}
+    volumes:
+      - ./db/migrate:/migrations
+    restart: "no"
+    command:
+      - "-path=/migrations"
+      - "-database"
+      - "postgres://${DATABASE_USER}:${DATABASE_PASSWORD}@postgres:5432/${DATABASE_NAME}?sslmode=disable"
+      - "up"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
