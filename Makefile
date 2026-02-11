@@ -19,7 +19,7 @@ ifneq (,$(wildcard $(ENV_FILE)))
     export
 endif
 
-.PHONY: help deps build clean db-up db-down migrate migrate-down seed run run-dev test coverage
+.PHONY: help deps build clean db-up db-down redis-up redis-down run-docker migrate migrate-down seed run run-dev test coverage
 
 # Helper to validate file
 check-env = @if [ ! -f $(1) ]; then echo "Error: $(1) not found"; exit 1; fi
@@ -38,12 +38,23 @@ build: deps ## Build binary
 clean: ## Remove generated files
 	@rm -rf $(BIN_DIR)/${BIN_NAME} $(VAR_DIR)/coverage.out $(VAR_DIR)/coverage.html tmp/main main
 
-db-up: ## Start application database
+db-up: ## Start PostgreSQL
 	$(call check-env,$(ENV_FILE))
 	@. $(ENV_FILE) && POSTGRES_ENV_FILE=./$(ENV_FILE) POSTGRES_PORT=$${DATABASE_PORT} docker-compose up postgres
 
-db-down: ## Stop application database
+db-down: ## Stop PostgreSQL
 	docker-compose stop postgres
+
+redis-up: ## Start Redis only
+	$(call check-env,$(ENV_FILE))
+	@. $(ENV_FILE) && docker-compose up redis
+
+redis-down: ## Stop Redis
+	docker-compose stop redis
+
+run-docker: ## Start PostgreSQL and Redis (docker compose)
+	$(call check-env,$(ENV_FILE))
+	@. $(ENV_FILE) && POSTGRES_ENV_FILE=./$(ENV_FILE) POSTGRES_PORT=$${DATABASE_PORT} docker-compose up postgres redis
 
 migrate: ## Run application migrations
 	$(call check-env,$(ENV_FILE))

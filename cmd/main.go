@@ -6,9 +6,11 @@ import (
 
 	"taskmanager/internal/config"
 	"taskmanager/internal/paths"
+	"taskmanager/internal/platform/cache"
 	"taskmanager/internal/platform/database"
 	"taskmanager/internal/platform/logger"
 	"taskmanager/internal/platform/server"
+	taskRepo "taskmanager/internal/repository/task"
 	"taskmanager/internal/transport"
 	"taskmanager/internal/usecase/task"
 	"taskmanager/internal/usecase/team"
@@ -21,6 +23,7 @@ func main() {
 		Logger   logger.Configuration   `toml:"logger"`
 		Task     task.Configuration     `toml:"task"`
 		Team     team.Configuration     `toml:"team"`
+		Cache    cache.Configuration    `toml:"cache"`
 	}{}
 
 	// Load configuration from file with environment variable expansion
@@ -48,6 +51,24 @@ func main() {
 			log.Print("Error closing database:", err)
 		}
 	}()
+
+	// Connect to cache
+	if err := cache.Open(appConfig.Cache); err != nil {
+		log.Fatal("Error on open cache connection", "error", err)
+	}
+	defer func() {
+		if err := cache.Close(); err != nil {
+			log.Print("Error closing cache:", err)
+		}
+	}()
+
+	// Wrap task repository with cache-aside decorator
+	cacheClient, _ := cache.Client()
+	taskRepo.SetPersist(taskRepo.NewCachedPersist(
+		taskRepo.Persist(),
+		cacheClient,
+		appConfig.Cache.DefaultTTL(),
+	))
 
 	// Start http server
 	address := fmt.Sprintf("%s:%d", appConfig.Server.Host, appConfig.Server.Port)

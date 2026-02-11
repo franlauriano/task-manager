@@ -26,3 +26,10 @@ list_max_limit=${TASK_LIST_MAX_LIMIT:-50}
 [team]
 list_default_limit=${TEAM_LIST_DEFAULT_LIMIT:-10}
 list_max_limit=${TEAM_LIST_MAX_LIMIT:-20}
+
+[cache]
+host="${CACHE_HOST}"
+port=${CACHE_PORT:-6379}
+password="${CACHE_PASSWORD}"
+db=${CACHE_DB:-0}
+default_ttl_seconds=${CACHE_DEFAULT_TTL_SECONDS:-300}

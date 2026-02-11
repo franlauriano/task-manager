@@ -11,7 +11,9 @@ import (
 	"taskmanager/internal/platform/testing/venomtest"
 )
 
-// Task Tests
+func resetWithMinimalData(env *testenv.Environment) {
+	dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
+}
 
 func TestCreateTask(t *testing.T) {
 	env := testenv.Setup(t,
@@ -20,37 +22,33 @@ func TestCreateTask(t *testing.T) {
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
 		testenv.WithHTTPServer(Routes()),
-		testenv.WithVenom(
+		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
 			venomtest.WithVerbose(1),
 		),
 	)
 
-	resetWithMinimalData := func() {
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
-	}
-
 	tests := []struct {
-		name  string
-		setup func()
-		path  string
+		name      string
+		setup     func()
+		suitePath string
 	}{
 		// Success
-		{"Create task with success (basic)", resetWithMinimalData, "success/tasks/create/basic.yml"},
-		{"Create task with success (edge cases)", resetWithMinimalData, "success/tasks/create/edge_cases.yml"},
-		{"Create task with success (corner cases)", resetWithMinimalData, "success/tasks/create/corner_cases.yml"},
+		{"with success (basic)", func() { resetWithMinimalData(env) }, "success/tasks/create/basic.yml"},
+		{"with success (edge cases)", func() { resetWithMinimalData(env) }, "success/tasks/create/edge_cases.yml"},
+		{"with success (corner cases)", func() { resetWithMinimalData(env) }, "success/tasks/create/corner_cases.yml"},
 		// Failure
-		{"Create task with bad request", resetWithMinimalData, "failure/tasks/create/bad_request.yml"},
-		{"Create task with validation errors", resetWithMinimalData, "failure/tasks/create/validation_errors.yml"},
-		{"Create task with missing content type", resetWithMinimalData, "failure/tasks/create/missing_content_type.yml"},
+		{"with bad request", func() { resetWithMinimalData(env) }, "failure/tasks/create/bad_request.yml"},
+		{"with validation errors", func() { resetWithMinimalData(env) }, "failure/tasks/create/validation_errors.yml"},
+		{"with missing content type", func() { resetWithMinimalData(env) }, "failure/tasks/create/missing_content_type.yml"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.setup != nil {
-				tt.setup()
+	for _, tc := range tests {
+		t.Run("Create task "+tc.name, func(t *testing.T) {
+			if tc.setup != nil {
+				tc.setup()
 			}
-			env.RunVenomSuite(t, tt.path)
+			env.RunAPISuite(t, tc.suitePath)
 		})
 	}
 }
@@ -62,38 +60,34 @@ func TestUpdateTask(t *testing.T) {
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
 		testenv.WithHTTPServer(Routes()),
-		testenv.WithVenom(
+		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
 			venomtest.WithVerbose(1),
 		),
 	)
 
-	resetWithMinimalData := func() {
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
-	}
-
 	tests := []struct {
-		name  string
-		setup func()
-		path  string
+		name      string
+		setup     func()
+		suitePath string
 	}{
 		// Success
-		{"Update task with success (basic)", resetWithMinimalData, "success/tasks/update/basic.yml"},
-		{"Update task with success (edge cases)", resetWithMinimalData, "success/tasks/update/edge_cases.yml"},
-		{"Update task with success (corner cases)", resetWithMinimalData, "success/tasks/update/corner_cases.yml"},
+		{"with success (basic)", func() { resetWithMinimalData(env) }, "success/tasks/update/basic.yml"},
+		{"with success (edge cases)", func() { resetWithMinimalData(env) }, "success/tasks/update/edge_cases.yml"},
+		{"with success (corner cases)", func() { resetWithMinimalData(env) }, "success/tasks/update/corner_cases.yml"},
 		// Failure
-		{"Update task with bad request", resetWithMinimalData, "failure/tasks/update/bad_request.yml"},
-		{"Update task with validation errors", resetWithMinimalData, "failure/tasks/update/validation_errors.yml"},
-		{"Update task with not found", resetWithMinimalData, "failure/tasks/update/not_found.yml"},
-		{"Update task with missing content type", resetWithMinimalData, "failure/tasks/update/missing_content_type.yml"},
+		{"with bad request", func() { resetWithMinimalData(env) }, "failure/tasks/update/bad_request.yml"},
+		{"with validation errors", func() { resetWithMinimalData(env) }, "failure/tasks/update/validation_errors.yml"},
+		{"with not found", func() { resetWithMinimalData(env) }, "failure/tasks/update/not_found.yml"},
+		{"with missing content type", func() { resetWithMinimalData(env) }, "failure/tasks/update/missing_content_type.yml"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.setup != nil {
-				tt.setup()
+	for _, tc := range tests {
+		t.Run("Update task "+tc.name, func(t *testing.T) {
+			if tc.setup != nil {
+				tc.setup()
 			}
-			env.RunVenomSuite(t, tt.path)
+			env.RunAPISuite(t, tc.suitePath)
 		})
 	}
 }
@@ -105,36 +99,32 @@ func TestDeleteTask(t *testing.T) {
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
 		testenv.WithHTTPServer(Routes()),
-		testenv.WithVenom(
+		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
 			venomtest.WithVerbose(1),
 		),
 	)
 
-	resetWithMinimalData := func() {
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
-	}
-
 	tests := []struct {
-		name  string
-		setup func()
-		path  string
+		name      string
+		setup     func()
+		suitePath string
 	}{
 		// Success
-		{"Delete task with success (basic)", resetWithMinimalData, "success/tasks/delete/basic.yml"},
-		{"Delete task with success (corner cases)", resetWithMinimalData, "success/tasks/delete/corner_cases.yml"},
+		{"with success (basic)", func() { resetWithMinimalData(env) }, "success/tasks/delete/basic.yml"},
+		{"with success (corner cases)", func() { resetWithMinimalData(env) }, "success/tasks/delete/corner_cases.yml"},
 		// Failure
-		{"Delete task with bad request", resetWithMinimalData, "failure/tasks/delete/bad_request.yml"},
-		{"Delete task with not found", resetWithMinimalData, "failure/tasks/delete/not_found.yml"},
-		{"Delete task with missing content type", resetWithMinimalData, "failure/tasks/delete/missing_content_type.yml"},
+		{"with bad request", func() { resetWithMinimalData(env) }, "failure/tasks/delete/bad_request.yml"},
+		{"with not found", func() { resetWithMinimalData(env) }, "failure/tasks/delete/not_found.yml"},
+		{"with missing content type", func() { resetWithMinimalData(env) }, "failure/tasks/delete/missing_content_type.yml"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.setup != nil {
-				tt.setup()
+	for _, tc := range tests {
+		t.Run("Delete task "+tc.name, func(t *testing.T) {
+			if tc.setup != nil {
+				tc.setup()
 			}
-			env.RunVenomSuite(t, tt.path)
+			env.RunAPISuite(t, tc.suitePath)
 		})
 	}
 }
@@ -146,35 +136,31 @@ func TestRetrieveTask(t *testing.T) {
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
 		testenv.WithHTTPServer(Routes()),
-		testenv.WithVenom(
+		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
 			venomtest.WithVerbose(1),
 		),
 	)
 
-	resetWithMinimalData := func() {
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
-	}
-
 	tests := []struct {
-		name  string
-		setup func()
-		path  string
+		name      string
+		setup     func()
+		suitePath string
 	}{
 		// Success
-		{"Retrieve task with success (basic)", resetWithMinimalData, "success/tasks/retrieve/basic.yml"},
-		{"Retrieve task with success (corner cases)", resetWithMinimalData, "success/tasks/retrieve/corner_cases.yml"},
+		{"with success (basic)", func() { resetWithMinimalData(env) }, "success/tasks/retrieve/basic.yml"},
+		{"with success (corner cases)", func() { resetWithMinimalData(env) }, "success/tasks/retrieve/corner_cases.yml"},
 		// Failure
-		{"Retrieve task with bad request", resetWithMinimalData, "failure/tasks/retrieve/bad_request.yml"},
-		{"Retrieve task with not found", resetWithMinimalData, "failure/tasks/retrieve/not_found.yml"},
+		{"with bad request", func() { resetWithMinimalData(env) }, "failure/tasks/retrieve/bad_request.yml"},
+		{"with not found", func() { resetWithMinimalData(env) }, "failure/tasks/retrieve/not_found.yml"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.setup != nil {
-				tt.setup()
+	for _, tc := range tests {
+		t.Run("Retrieve task "+tc.name, func(t *testing.T) {
+			if tc.setup != nil {
+				tc.setup()
 			}
-			env.RunVenomSuite(t, tt.path)
+			env.RunAPISuite(t, tc.suitePath)
 		})
 	}
 }
@@ -186,35 +172,31 @@ func TestListTasks(t *testing.T) {
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
 		testenv.WithHTTPServer(Routes()),
-		testenv.WithVenom(
+		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
 			venomtest.WithVerbose(1),
 		),
 	)
 
-	resetWithMinimalData := func() {
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
-	}
-
 	tests := []struct {
-		name  string
-		setup func()
-		path  string
+		name      string
+		setup     func()
+		suitePath string
 	}{
 		// Success
-		{"List tasks with success (basic)", resetWithMinimalData, "success/tasks/list/basic.yml"},
-		{"List tasks with success (edge cases)", resetWithMinimalData, "success/tasks/list/edge_cases.yml"},
-		{"List tasks with success (corner cases)", resetWithMinimalData, "success/tasks/list/corner_cases.yml"},
+		{"with success (basic)", func() { resetWithMinimalData(env) }, "success/tasks/list/basic.yml"},
+		{"with success (edge cases)", func() { resetWithMinimalData(env) }, "success/tasks/list/edge_cases.yml"},
+		{"with success (corner cases)", func() { resetWithMinimalData(env) }, "success/tasks/list/corner_cases.yml"},
 		// Failure
-		{"List tasks with bad request", resetWithMinimalData, "failure/tasks/list/bad_request.yml"},
+		{"with bad request", func() { resetWithMinimalData(env) }, "failure/tasks/list/bad_request.yml"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.setup != nil {
-				tt.setup()
+	for _, tc := range tests {
+		t.Run("List tasks "+tc.name, func(t *testing.T) {
+			if tc.setup != nil {
+				tc.setup()
 			}
-			env.RunVenomSuite(t, tt.path)
+			env.RunAPISuite(t, tc.suitePath)
 		})
 	}
 }
@@ -226,36 +208,32 @@ func TestUpdateTaskStatus(t *testing.T) {
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
 		testenv.WithHTTPServer(Routes()),
-		testenv.WithVenom(
+		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
 			venomtest.WithVerbose(1),
 		),
 	)
 
-	resetWithMinimalData := func() {
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
-	}
-
 	tests := []struct {
-		name  string
-		setup func()
-		path  string
+		name      string
+		setup     func()
+		suitePath string
 	}{
 		// Success
-		{"Update task status with success (basic)", resetWithMinimalData, "success/tasks/status/basic.yml"},
+		{"with success (basic)", func() { resetWithMinimalData(env) }, "success/tasks/status/basic.yml"},
 		// Failure
-		{"Update task status with bad request", resetWithMinimalData, "failure/tasks/status/bad_request.yml"},
-		{"Update task status with validation errors", resetWithMinimalData, "failure/tasks/status/validation_errors.yml"},
-		{"Update task status with not found", resetWithMinimalData, "failure/tasks/status/not_found.yml"},
-		{"Update task status with missing content type", resetWithMinimalData, "failure/tasks/status/missing_content_type.yml"},
+		{"with bad request", func() { resetWithMinimalData(env) }, "failure/tasks/status/bad_request.yml"},
+		{"with validation errors", func() { resetWithMinimalData(env) }, "failure/tasks/status/validation_errors.yml"},
+		{"with not found", func() { resetWithMinimalData(env) }, "failure/tasks/status/not_found.yml"},
+		{"with missing content type", func() { resetWithMinimalData(env) }, "failure/tasks/status/missing_content_type.yml"},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if tt.setup != nil {
-				tt.setup()
+	for _, tc := range tests {
+		t.Run("Update task status "+tc.name, func(t *testing.T) {
+			if tc.setup != nil {
+				tc.setup()
 			}
-			env.RunVenomSuite(t, tt.path)
+			env.RunAPISuite(t, tc.suitePath)
 		})
 	}
 }

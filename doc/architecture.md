@@ -59,7 +59,8 @@ Este projeto segue uma arquitetura em camadas (Layered Architecture) com separa�
 │                CAMADA DE INFRAESTRUTURA                     │
 │                (Cross-cutting Concerns)                     │
 ├─────────────────────────────────────────────────────────────┤
-│  • Database (Conexão PostgreSQL)                            │
+│  • Database (Conexão PostgreSQL)                           │
+│  • Cache (Redis)                                           │
 │  • HTTP Utilities                                           │
 │  • Logger                                                   │
 │  • Server                                                   │
@@ -119,6 +120,25 @@ HTTP Request
     ▼
 HTTP Response
 ```
+
+## Tecnologias e Ferramentas
+
+- **Linguagem**: Go 1.25
+- **Framework Web**: Chi (go-chi/chi)
+- **ORM**: GORM
+- **Banco de Dados**: PostgreSQL
+- **Cache**: Redis
+- **Configuração**: pelletier/go-toml/v2 (TOML parsing com expansão de variáveis de ambiente)
+- **Logging**: slog (aplicação); middleware de request em NDJSON (transport, JSONLogFormatter)
+- **Testes**:
+  - Go testing package (unitários e integração)
+  - Testcontainers-go (containers PostgreSQL para testes)
+  - Venom (testes de API em YAML)
+  - google/go-cmp (comparações estruturais)
+- **Containerização**: Docker Compose (serviços: `postgres`, `redis`, `migrate`; testes usam testcontainers)
+- **Comandos (Makefile)**: `db-up`, `db-down`, `redis-up`, `redis-down`, `run-docker`, `migrate`, `migrate-down`, `seed`, `run`, `run-dev`, `test`, `coverage`. O target `run-docker` sobe PostgreSQL e Redis juntos. O target `seed` executa `db/seed/populate.sql` no Postgres via Docker (psql) e depende de `migrate`.
+- **Migrações**: SQL direto (up/down)
+- **Estrutura de Módulo**: Go modules com prefixo `taskmanager/internal/...` para imports internos
 
 ## Estrutura de Diretórios
 
@@ -208,8 +228,10 @@ task-manager/  # Raiz do projeto
 │   │   │
 │   │   ├── 📂 task/                          # Repositório de Tasks
 │   │   │   ├── persist.go                    # Interface Persistent e implementação PostgreSQL
-│   │   │   ├── persist_test.go              # Testes de persistência
-│   │   │   ├── persist_mock.go              # Mock para testes
+│   │   │   ├── cache.go                      # Cache Redis para tarefas
+│   │   │   ├── persist_test.go               # Testes de persistência
+│   │   │   ├── cache_test.go                 # Testes de cache
+│   │   │   ├── persist_mock.go               # Mock para testes
 │   │   │   └── main_test.go                  # Setup de testes
 │   │   │
 │   │   └── 📂 team/                          # Repositório de Teams
@@ -222,6 +244,10 @@ task-manager/  # Raiz do projeto
 │   │   ├── 📂 database/                      # Gerenciamento de banco de dados
 │   │   │   ├── options.go                    # Option, WithDBTransaction, WithDBWithoutTransaction (para InjectDBsIntoContext)
 │   │   │   └── postgres.go                   # Conexão PostgreSQL via GORM
+│   │   │
+│   │   ├── 📂 cache/                         # Cache Redis
+│   │   │   ├── cache.go                      # Interface e configuração de cache
+│   │   │   └── redis.go                     # Implementação Redis
 │   │   │
 │   │   ├── 📂 errors/                        # Tratamento de erros
 │   │   │   └── error.go                      # Definições de erros customizados
@@ -394,6 +420,7 @@ task-manager/  # Raiz do projeto
 - **task/**: Repositório de Tasks
   - Interface `Persistent` define contratos (Create, RetrieveByUUID, Update, Delete, ListPaginated, UpdateStatus, ListByTeamID)
   - Implementação `datasource` usa PostgreSQL via GORM
+  - Cache via Redis (`cache.go`) para consultas de tarefas
   - Injeção via `SetPersist()` para testes
   - Acesso ao banco via `database.DBFromContext()`
   
@@ -418,15 +445,16 @@ task-manager/  # Raiz do projeto
 
 **Componentes:**
 - **database/**: Gerenciamento de conexão PostgreSQL
+- **cache/**: Conexão e abstração de cache Redis
 - **http/**: Parsing de requests e formatação de responses
 - **logger/**: Sistema de logs estruturados
 - **errors/**: Erros customizados da aplicação
 - **server/**: Inicialização do servidor HTTP
 - **testing/**: Infraestrutura de testes genérica e reutilizável
-  - **testenv/**: Environment unificado para setup de testes (DB, HTTP, Venom). Servidor HTTP via `net/http/httptest` (interno). `RunVenomSuite`.
+  - **testenv/**: Environment unificado para setup de testes (DB, HTTP, Venom). Servidor HTTP via `net/http/httptest` (interno). `RunAPISuite`.
   - **dbtest/**: Container PostgreSQL (testcontainers com otimizações de performance), fixtures, cleanup, SetupDBWithTransaction/SetupDBWithoutTransaction (transaction.go)
   - **assert/**: Helper de comparação de erros (`CompareErrors()` que retorna diff string)
-  - **venomtest/**: Runner para suites Venom; usado via testenv com `WithVenom` e `env.RunVenomSuite(t, suitePath)`
+  - **venomtest/**: Runner para suites Venom; usado via testenv com `WithAPITest` e `env.RunAPISuite(t, suitePath)`
 
 ### 6. Camada de Configuração (`internal/config/`)
 
@@ -522,54 +550,6 @@ task-manager/  # Raiz do projeto
 11. HTTP 200 OK + JSON Response
 ```
 
-## Estrutura do Banco de Dados
-
-### Tabelas
-
-**tasks:**
-- `id` (PK, auto-increment)
-- `uuid` (unique, UUID v7)
-- `title` (string, not null)
-- `description` (string, not null)
-- `status` (VARCHAR(20) com valores restritos: to_do, in_progress, done, canceled)
-- `started_at` (timestamp, nullable)
-- `finished_at` (timestamp, nullable)
-- `team_id` (FK, nullable, index)
-- `created_at`, `updated_at`, `deleted_at` (soft delete)
-
-**teams:**
-- `id` (PK, auto-increment)
-- `uuid` (unique, UUID v7)
-- `name` (string, not null)
-- `description` (string, not null)
-- `created_at`, `updated_at`, `deleted_at` (soft delete)
-
-### Relacionamentos
-
-```
-teams (1) ──────< (N) tasks
-```
-
-Uma equipe pode ter múltiplas tarefas, mas uma tarefa pertence a no máximo uma equipe.
-
-## Tecnologias e Ferramentas
-
-- **Linguagem**: Go 1.25
-- **Framework Web**: Chi (go-chi/chi)
-- **ORM**: GORM
-- **Banco de Dados**: PostgreSQL
-- **Configuração**: pelletier/go-toml/v2 (TOML parsing com expansão de variáveis de ambiente)
-- **Logging**: slog (aplicação); middleware de request em NDJSON (transport, JSONLogFormatter)
-- **Testes**: 
-  - Go testing package (unitários e integração)
-  - Testcontainers-go (containers PostgreSQL para testes)
-  - Venom (testes de API em YAML)
-  - google/go-cmp (comparações estruturais)
-- **Containerização**: Docker Compose (serviços: `postgres`, `migrate`; testes usam testcontainers)
-- **Comandos (Makefile)**: `db-up`, `db-down`, `migrate`, `migrate-down`, `seed`, `run`, `run-dev`, `test`, `coverage`. O target `seed` executa `db/seed/populate.sql` no Postgres via Docker (psql) e depende de `migrate`.
-- **Migrações**: SQL direto (up/down)
-- **Estrutura de Módulo**: Go modules com prefixo `taskmanager/internal/...` para imports internos
-
 ## Padrões Arquiteturais Utilizados
 
 1. **Clean Architecture**: Separação em camadas independentes (Entity, UseCase, Repository, Transport)
@@ -632,13 +612,13 @@ Entity (mais interna)
 
 ## Testes
 
-### Estratégia em 3 níveis
+### 1. Estratégia em 3 Níveis
 
-- **Unitário**: 
-  - Entidades: `entity/*/*_test.go` (ex. `task_test.go`, `team_test.go`) - testam validações e regras de domínio
-  - Casos de uso: `usecase/*/*_test.go` (ex. `task_test.go`, `team_test.go`) - testam orquestração com mocks de repositório
+- **Unitário**:
+  - Entidades: `entity/*/*_test.go` (ex. `task_test.go`, `team_test.go`) — validações e regras de domínio
+  - Casos de uso: `usecase/*/*_test.go` (ex. `task_test.go`, `team_test.go`) — orquestração com mocks de repositório
 - **Integração (persistência)**: `repository/*/persist_test.go` com PostgreSQL real via Testcontainers
-- **API (Venom)**: specs em `api_test/` (YAML); execução em `transport/task_handler_test.go` e `transport/team_handler_test.go` via `testenv` + `WithVenom` + `env.RunVenomSuite(t, path)`. `transport/main_test.go` fornece `TestMain` (container DB compartilhado).
+- **API (Venom)**: specs YAML em `api_test/`; execução em `transport/{task,team}_handler_test.go` via `testenv` + `WithAPITest` + `env.RunAPISuite(t, path)`
 
 ```mermaid
 flowchart TB
@@ -661,91 +641,86 @@ flowchart TB
     integration_yml --> venomtest
 ```
 
-### Testes de API (Venom)
+### 2. Execução e Convenções
 
-**Local e ferramenta:** `api_test/`, Venom (YAML). Responsabilidade: documentar expectativas da API e validar fluxos via HTTP.
+- **Build tags**: `//go:build test` em testes que usam DB/containers. `go test -tags=test ./...` para suite completa; sem tag para unitários leves (ex. `entity/task/task_test.go`).
+- **Boas práticas**: table-driven, `t.Run()` por caso, `t.Helper()` em helpers, `t.Cleanup()` para cleanup.
+- **YAML vs Go para testes de API**:
+  - **Preferir YAML** (maior parte dos testes) — simples, documentação viva, manutenção por QA/devs
+  - **Go** — lógica complexa que YAML não suporta bem, compartilhar estado com código Go
 
-**Estrutura:**
+### 3. Dados de Teste
 
-- **success/**: Casos de sucesso (HTTP 200, 201). Organizado por recurso (`tasks/`, `teams/`) e operação (`create/`, `update/`, etc.). Arquivos: `basic.yml`, `edge_cases.yml`, `corner_cases.yml`.
-- **failure/**: Casos de erro. Mesma organização por recurso e operação. Arquivos: `bad_request.yml`, `validation_errors.yml`, `not_found.yml`, `missing_content_type.yml`.
+#### Seed vs Fixtures
 
-**Categorias de sucesso:**
+- **Seed** (`db/seed/`): Dados para desenvolvimento e demonstração. `make seed` roda `populate.sql` no Postgres via Docker (depende de `migrate`).
+- **Fixtures** (`db/fixtures/`): Dados para testes. Carregado via `dbtest.LoadFixtures()` ou `dbtest.ResetWithFixtures()` (TRUNCATE + INSERT). Novas fixtures podem ser criadas em `db/fixtures/` (ex. `pagination.sql`) e referenciadas por nome.
 
-- **Basic**: Casos de uso padrão, fluxos principais com valores normais. Validações básicas (status code, campos obrigatórios); comportamento esperado em uso normal.
-- **Edge Cases**: Valores limites de um único parâmetro (mínimo, máximo ou que excedem limites). Ex.: strings no tamanho max/min permitido, paginação extrema (`limit=0`, `limit=max`, `page=99999`), valores que a API normaliza automaticamente.
-- **Corner Cases**: Múltiplos fatores ao mesmo tempo ou comportamentos menos óbvios. Ex.: caracteres especiais/Unicode/emojis, parâmetros duplicados na query, idempotência (operação repetida com mesmo resultado), trim de espaços.
+#### Isolamento entre testes
 
-**Categorias de falha:**
+**Testes de repository** — transação com rollback automático (dados nunca persistem):
 
-- `bad_request.yml`: HTTP 400 — JSON inválido, tipos errados, UUID inválido.
-- `validation_errors.yml`: HTTP 422 — campos vazios, faltando ou inválidos.
-- `not_found.yml`: HTTP 404 — recurso não encontrado.
-- `missing_content_type.yml`: Rejeição quando falta o header Content-Type.
+```go
+t.Run(tt.name, func(t *testing.T) {
+    ctx := dbtest.SetupDBWithTransaction(t, tt.ctx)
+    // BEGIN transaction → operações → t.Cleanup → ROLLBACK
+    err := p.Create(ctx, task)
+})
+```
 
-**Recursos do Venom:**
+**Testes de transport** — TRUNCATE + fixtures entre subtestes. O middleware comita transações em caso de sucesso (comportamento real da API), então dados persistem e o estado é resetado:
 
-- Extração e reutilização de variáveis (`{{.variable_name}}`).
-- Asserções sobre status code, estrutura JSON e valores.
+```go
+resetWithMinimalData := func() {
+    dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
+}
 
-### Infraestrutura de testes (Go)
+t.Run(tc.name, func(t *testing.T) {
+    resetWithMinimalData()            // TRUNCATE + INSERT fixtures
+    env.RunAPISuite(t, tc.suitePath)  // HTTP request → middleware commit → dados persistem
+})
+```
 
-- **testenv**: Setup unificado com `WithDatabase` ou `WithNewDatabase`, `WithHTTPServer`, `WithVenom`. `env.RunVenomSuite(t, suitePath)` para suites Venom (exige `WithHTTPServer` + `WithVenom`). Cleanup via `t.Cleanup()`. Entre subtestes use `dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")` para garantir estado limpo.
+### 4. Infraestrutura de Testes (Go)
+
+#### testenv — Setup unificado
+
+Combina DB, HTTP e Venom em um único `Setup()`. Cleanup automático via `t.Cleanup()`.
+
+Options: `WithDatabase` / `WithNewDatabase`, `WithHTTPServer`, `WithAPITest`.
 
 ```go
 env := testenv.Setup(t,
     testenv.WithDatabase(databaseTest, dbtest.WithMigrations(paths.MigrationDir())),
     testenv.WithHTTPServer(Routes()),
-    testenv.WithVenom(venomtest.WithSuiteRoot(paths.APITestDir()), venomtest.WithVerbose(1)),
+    testenv.WithAPITest(venomtest.WithSuiteRoot(paths.APITestDir()), venomtest.WithVerbose(1)),
 )
 resetWithMinimalData := func() { dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql") }
-// Em cada subteste: if tt.setup != nil { tt.setup() }; env.RunVenomSuite(t, tt.path)
+// Em cada subteste: if tc.setup != nil { tc.setup() }; env.RunAPISuite(t, tc.suitePath)
 ```
 
-- **dbtest**: `dbtest.SetupDBWithTransaction(t, ctx)` retorna uma cópia de `ctx` com a transação anexada (rollback via `t.Cleanup()`). Preserva valores já existentes em `ctx`; se `ctx` for nil, usa `context.Background()`. Para testes sem transação: `dbtest.SetupDBWithoutTransaction(t, ctx)`.
+#### dbtest — Database testing
 
-```go
-ctx := dbtest.SetupDBWithTransaction(t, tt.ctx)
-err := p.Create(ctx, task)
-```
+- **Container**: PostgreSQL via Testcontainers com `SetupDatabase()` e `TeardownDatabase()`
+- **Transações**: `SetupDBWithTransaction(t, ctx)` — retorna ctx com transação anexada (rollback via `t.Cleanup()`). Preserva valores já existentes em ctx; se ctx for nil, usa `context.Background()`. Alternativa sem transação: `SetupDBWithoutTransaction(t, ctx)`.
+- **Fixtures**: `LoadFixtures(db, dir, file)` e `ResetWithFixtures(db, dir, file)` (TRUNCATE + INSERT)
+- **Cleanup**: `CleanDatabase()` — TRUNCATE em todas as tabelas
 
-- **assert**: `CompareErrors(got, want)` retorna diff string (vazia se iguais); `cmp.Diff` para valores. Permite controlar quando falhar e mensagens por contexto.
-- **Container PostgreSQL**: flags `fsync=off`, `synchronous_commit=off`, `full_page_writes=off` e tmpfs em `/var/lib/postgresql` — ~2–3x mais rápido, dados em memória.
+#### venomtest — Runner Venom
 
-### Testcontainers e Paralelismo Entre Pacotes
+Execução de suites Venom YAML. Options: `WithSuiteRoot(path)`, `WithVerbose(level)`. Usado via testenv com `WithAPITest(...)` e `env.RunAPISuite(t, suitePath)`.
 
-#### Modelo de execução do `go test`
+#### assert — Comparação de erros
 
-O `go test` compila cada pacote em um **binário separado** e executa cada um como um **processo independente do sistema operacional**. Isso significa que pacotes rodando em paralelo possuem:
+`CompareErrors(got, want)` retorna diff string (vazia se iguais). Usa `cmp.Diff` internamente. Permite controlar quando falhar e personalizar mensagens por contexto.
 
-- **PIDs diferentes** — processos distintos no SO
-- **Espaços de memória isolados** — variáveis globais não são compartilhadas entre pacotes
-- **Containers Docker independentes** — cada `TestMain` cria seu próprio container PostgreSQL com porta aleatória
 
-```
-go test ./internal/repository/task/... ./internal/repository/team/... ./internal/transport/...
 
-┌─────────────────────────┐  ┌─────────────────────────┐  ┌─────────────────────────┐
-│ Processo 1 (PID 12345)  │  │ Processo 2 (PID 12346)  │  │ Processo 3 (PID 12347)  │
-│ repository/task         │  │ repository/team         │  │ transport               │
-│                         │  │                         │  │                         │
-│ Memória própria         │  │ Memória própria         │  │ Memória própria         │
-│ database.SetDB(db) ─┐   │  │ database.SetDB(db) ─┐   │  │ database.SetDB(db) ─┐   │
-│                     │   │  │                     │   │  │                     │   │
-│ Container A ◄───────┘   │  │ Container B ◄───────┘   │  │ Container C ◄───────┘   │
-│ postgres:18-alpine      │  │ postgres:18-alpine      │  │ postgres:18-alpine      │
-│ porta 55432             │  │ porta 55489             │  │ porta 55501             │
-└─────────────────────────┘  └─────────────────────────┘  └─────────────────────────┘
-         ▲                            ▲                            ▲
-         │                            │                            │
-         └── Sem referência cruzada ──┴── Isolamento total ────────┘
-```
+### 5. Container PostgreSQL e Paralelismo
 
-Quando `repository/task` derruba seu container, o container de `repository/team` continua rodando normalmente. O `go test` controla o grau de paralelismo entre pacotes via flag `-p` (padrão: `GOMAXPROCS`).
+#### Um container por pacote (TestMain)
 
-#### Container por pacote via TestMain
-
-Cada pacote que precisa de banco cria **um único container** no `TestMain`, compartilhado por todos os testes daquele pacote. O container é destruído ao final da execução do pacote:
+Cada pacote que precisa de banco cria **um único container** no `TestMain`, compartilhado por todos os testes daquele pacote:
 
 ```go
 var databaseTest *dbtest.Container
@@ -753,7 +728,6 @@ var databaseTest *dbtest.Container
 func TestMain(m *testing.M) {
     os.Exit(func(m *testing.M) int {
         // ... load config ...
-
         var err error
         if databaseTest, err = dbtest.SetupDatabase(nil,
             dbtest.WithMigrations(paths.MigrationDir()),
@@ -765,23 +739,35 @@ func TestMain(m *testing.M) {
                 log.Printf("Failed to teardown database: %v", err)
             }
         }()
-
         return m.Run()
     }(m))
 }
 ```
 
-Os testes recebem o container via `testenv.WithDatabase(databaseTest)`, que registra a conexão no pacote `database` global (do processo):
+Os testes recebem o container via `testenv.WithDatabase(databaseTest)`. Se não houver container no `TestMain`, use `WithNewDatabase(...)` para criar um novo.
 
-```go
-env := testenv.Setup(t,
-    testenv.WithDatabase(databaseTest),
-)
+#### Paralelismo entre pacotes
+
+O `go test` compila cada pacote em um **binário separado** (processo independente). Pacotes rodando em paralelo possuem memória isolada e containers Docker independentes — cada `TestMain` cria seu container PostgreSQL com porta aleatória. Paralelismo controlado via flag `-p` (padrão: `GOMAXPROCS`).
+
+```
+go test ./internal/repository/task/... ./internal/repository/team/... ./internal/transport/...
+
+┌─────────────────────────┐  ┌─────────────────────────┐  ┌─────────────────────────┐
+│ Processo 1 (PID 12345)  │  │ Processo 2 (PID 12346)  │  │ Processo 3 (PID 12347)  │
+│ repository/task         │  │ repository/team         │  │ transport               │
+│                         │  │                         │  │                         │
+│ Container A             │  │ Container B             │  │ Container C             │
+│ postgres:18-alpine      │  │ postgres:18-alpine      │  │ postgres:18-alpine      │
+│ porta 55432             │  │ porta 55489             │  │ porta 55501             │
+└─────────────────────────┘  └─────────────────────────┘  └─────────────────────────┘
+         ▲                            ▲                            ▲
+         └── Sem referência cruzada ──┴── Isolamento total ────────┘
 ```
 
-#### Otimizações do container de teste
+#### Otimizações de performance
 
-O container PostgreSQL é configurado para máxima velocidade, sacrificando durabilidade (aceitável em testes):
+O container é configurado para máxima velocidade, sacrificando durabilidade (aceitável em testes):
 
 | Configuração | Efeito |
 |---|---|
@@ -790,40 +776,43 @@ O container PostgreSQL é configurado para máxima velocidade, sacrificando dura
 | `full_page_writes=off` | Não escreve páginas completas |
 | `tmpfs /var/lib/postgresql` | Dados em memória RAM |
 
-#### Isolamento entre testes dentro do pacote
+Resultado: ~2–3x mais rápido que PostgreSQL com configuração padrão.
 
-**Testes de repository** — isolamento via transação com rollback automático:
+### 6. Testes de API (Venom)
 
-```go
-t.Run(tt.name, func(t *testing.T) {
-    ctx := dbtest.SetupDBWithTransaction(t, tt.ctx)
-    // BEGIN transaction
-    // ... operações do teste ...
-    // t.Cleanup → ROLLBACK (dados nunca persistem)
-})
-```
+**O que é:** Framework declarativo OVH para testes de API em YAML. Specs são auto-explicativas (documentação viva), reutilizam variáveis entre requests (fluxos multi-step), e suportam asserções ricas.
 
-**Testes de transport** — isolamento via TRUNCATE + fixtures. O middleware comita transações em caso de sucesso (comportamento real da API), então dados persistem e o estado é resetado entre subtestes:
+#### Estrutura
 
-```go
-resetWithMinimalData := func() {
-    dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
-}
+- **Go**: `internal/transport/{task,team}_handler_test.go` — table-driven, um `TestXxx()` por operação (ex: `TestCreateTask`), subtestes mapeiam para YAML
+- **YAML**: `api_test/{success,failure}/{resource}/{operation}/{category}.yml`
 
-t.Run(tt.name, func(t *testing.T) {
-    resetWithMinimalData()         // TRUNCATE + INSERT fixtures
-    env.RunVenomSuite(t, tt.path)  // HTTP request → middleware commit → dados persistem
-})
-```
+#### Categorias de testes
 
-#### Seed vs Fixtures
+*Sucesso (2xx):*
+- `basic.yml` — Fluxo padrão com valores normais. Ex: criar task com título+descrição, validar HTTP 200, campos obrigatórios
+- `edge_cases.yml` — Limites de um único parâmetro. Ex: título com 255 chars (máximo), 1 char (mínimo), paginação extrema (`limit=0`, `limit=max`, `page=99999`), valores normalizados pela API
+- `corner_cases.yml` — Múltiplos fatores simultâneos ou comportamentos não-óbvios. Ex: Unicode/emojis, parâmetros duplicados na query, idempotência
 
-- **Seed** (`db/seed/`): Dados para desenvolvimento e demonstração. Em ambiente local: `make seed` (roda `db/seed/populate.sql` no Postgres via Docker; depende de `migrate`).
-- **Fixtures** (`db/fixtures/`): Dados para testes. Carregado via `dbtest.LoadFixtures(db, paths.FixtureDir(), "arquivo.sql")` ou `dbtest.ResetWithFixtures(db, paths.FixtureDir(), "tasks_minimal.sql")` (limpa + carrega). Cada subteste deve chamar `ResetWithFixtures` no `setup` para garantir estado limpo.
-- **Padrão nos testes**: `resetWithMinimalData := func() { dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql") }` e passar `resetWithMinimalData` no `setup` de cada caso. Novas fixtures podem ser criadas em `db/fixtures/` (ex. `pagination.sql`) e referenciadas por nome.
+*Falha (4xx):*
+- `bad_request.yml` — HTTP 400. JSON inválido, tipos errados, UUID inválido
+- `validation_errors.yml` — HTTP 422. Campos vazios, muito curto/longo, valores inválidos para domínio
+- `not_found.yml` — HTTP 404. Recurso não existe
+- `missing_content_type.yml` — Requisição sem header `Content-Type: application/json`
 
-### Organização e execução
+#### Recursos Venom
 
-- **Build tags**: `//go:build test` em testes que usam DB/containers. `go test -tags=test ./...` para suite completa; sem tag para unitários leves (ex. `task_test.go`).
-- **Boas práticas**: table-driven, `t.Run()` por caso, `t.Helper()` em helpers, `t.Cleanup()` para cleanup, isolamento por transação em testes de persistência.
-- **Container compartilhado**: Se inicializado no `TestMain` via `SetupDatabase()`, é passado explicitamente para os testes usando `WithDatabase(databaseTest)`. Se não houver container no TestMain, use `WithNewDatabase(...)` para criar um novo container.
+| Recurso | Descrição |
+|---------|-----------|
+| `{{.base_url}}`/`{{.variable_name}}` | Variáveis de contexto e templating; `base_url` é injetada pelo runner |
+| `vars.task_id: from: result.bodyjson.id` | Extrai valor JSON da resposta para próximos steps |
+| `result.statuscode` | Status HTTP (200, 400, 422, 404, etc.) |
+| `result.bodyjson` | Resposta JSON com dot notation (ex: `result.bodyjson.uuid`, `result.bodyjson.items.0.name`) |
+| `result.body` / `result.headers` | Resposta em texto puro e headers HTTP |
+| `ShouldEqual`, `ShouldNotBeNil` | Asserções de igualdade e valor nulo |
+| `ShouldContainKey`, `ShouldBeArray` | Validações de estrutura JSON |
+| `ShouldContainSubstring` | Busca de texto no corpo |
+| `ShouldBeGreaterThanOrEqualTo`, `ShouldBeLessThan` | Comparações numéricas |
+| `type: http` | Requisição HTTP — **principal neste projeto** |
+| `type: exec` / `type: sql` | Shell commands ou queries SQL para validar estado |
+| `skip: true` / `retry: 3` | Controle de execução |

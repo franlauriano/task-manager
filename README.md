@@ -37,10 +37,11 @@ Esta API permite gerenciar tarefas e equipes, com funcionalidades como:
 - **Framework Web**: Chi (go-chi/chi)
 - **ORM**: GORM
 - **Banco de Dados**: PostgreSQL 18
+- **Cache**: Redis 8
 - **Configuração**: pelletier/go-toml/v2 (TOML parsing com expansão de variáveis de ambiente)
 - **Logging**: slog (structured logging)
 - **Testes**: Go testing package, Testcontainers (PostgreSQL em testes) e Venom (testes de API)
-- **Containerização**: Docker Compose (postgres, migrate)
+- **Containerização**: Docker Compose (postgres, redis, migrate)
 - **Migrações**: SQL direto (up/down)
 
 ## Pré-requisitos
@@ -91,10 +92,21 @@ A aplicação utiliza `pelletier/go-toml/v2` para parsing de arquivos TOML com s
 
 ## Como Executar
 
-### 1. Subir o banco de dados
+### 1. Subir o banco de dados e o Redis
 
+**Opção 1 — PostgreSQL e Redis juntos (recomendado):**
+```bash
+make run-docker
+```
+
+**Opção 2 — Apenas PostgreSQL:**
 ```bash
 make db-up
+```
+
+**Opção 3 — Apenas Redis:**
+```bash
+make redis-up
 ```
 
 ### 2. Executar migrações
@@ -165,11 +177,14 @@ O projeto inclui um `Makefile` com os seguintes comandos:
 | `make deps` | Baixa e organiza dependências |
 | `make build` | Compila o binário da aplicação |
 | `make clean` | Remove arquivos gerados (binários, coverage, etc.) |
-| `make db-up` | Sobe o banco de dados PostgreSQL da aplicação |
-| `make db-down` | Para o banco de dados da aplicação |
+| `make db-up` | Sobe somente o PostgreSQL |
+| `make db-down` | Para o PostgreSQL |
+| `make redis-up` | Sobe somente o Redis |
+| `make redis-down` | Para o Redis |
+| `make run-docker` | Sobe PostgreSQL e Redis via docker compose |
 | `make migrate` | Executa migrações do banco da aplicação |
 | `make migrate-down` | Reverte migrações do banco da aplicação |
-| `make seed` | Executa o seed (`db/seed/populate.sql`) via Docker; depende de `migrate` |
+| `make seed` | Executa o seed (`db/seed/populate.sql`) via Docker; depende de `migrate` (requer postgres: `make run-docker` ou `make db-up`) |
 | `make run` | Executa a aplicação (sem live reload) |
 | `make run-dev` | Executa a aplicação com live reload (requer Air) |
 | `make test` | Executa testes unitários e de integração (usa Testcontainers) |

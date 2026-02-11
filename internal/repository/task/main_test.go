@@ -10,10 +10,12 @@ import (
 	"taskmanager/internal/paths"
 	"taskmanager/internal/platform/database"
 	"taskmanager/internal/platform/testing/dbtest"
+	"taskmanager/internal/platform/testing/redistest"
 	"taskmanager/internal/testing/configtest"
 )
 
 var databaseTest *dbtest.Container
+var redisTest *redistest.Container
 
 func TestMain(m *testing.M) {
 	os.Exit(func(m *testing.M) int {
@@ -36,6 +38,16 @@ func TestMain(m *testing.M) {
 		defer func() {
 			if err := databaseTest.TeardownDatabase(); err != nil {
 				log.Printf("Failed to teardown database: %v", err)
+			}
+		}()
+
+		// Setup Redis container for cache tests
+		if redisTest, err = redistest.SetupRedis(nil); err != nil {
+			log.Fatalf("Failed to setup redis: %v", err)
+		}
+		defer func() {
+			if err := redisTest.TeardownRedis(); err != nil {
+				log.Printf("Failed to teardown redis: %v", err)
 			}
 		}()
 

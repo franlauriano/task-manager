@@ -7,8 +7,10 @@ import (
 
 	"taskmanager/internal/platform/database"
 	"taskmanager/internal/platform/testing/dbtest"
+	"taskmanager/internal/platform/testing/redistest"
 	"taskmanager/internal/platform/testing/venomtest"
 
+	"github.com/redis/go-redis/v9"
 	"gorm.io/gorm"
 )
 
@@ -18,6 +20,10 @@ type Environment struct {
 	// Database
 	DB        *gorm.DB
 	container *dbtest.Container
+
+	// Redis
+	Redis          *redis.Client
+	containerRedis *redistest.Container
 
 	// HTTP Server
 	server  *httptest.Server
@@ -36,6 +42,11 @@ type Config struct {
 	needsDB     bool
 	containerDB *dbtest.Container
 	optionsDB   []dbtest.Option
+
+	// Redis options
+	needsRedis     bool
+	containerRedis *redistest.Container
+	optionsRedis   []redistest.Option
 
 	// HTTP server options
 	needsHTTP bool
@@ -67,6 +78,10 @@ func Setup(t *testing.T, opts ...Option) *Environment {
 		env.setupDatabase(t)
 	}
 
+	if cfg.needsRedis {
+		env.setupRedis(t)
+	}
+
 	if cfg.needsHTTP {
 		env.setupHTTPServer(t)
 	}
@@ -78,7 +93,7 @@ func Setup(t *testing.T, opts ...Option) *Environment {
 	return env
 }
 
-func (e *Environment) RunVenomSuite(t *testing.T, suitePath string) {
+func (e *Environment) RunAPISuite(t *testing.T, suitePath string) {
 	t.Helper()
 	e.venomRunner.Run(t, suitePath)
 }
@@ -103,6 +118,33 @@ func (e *Environment) setupDatabase(t *testing.T) {
 	e.DB = container.DB()
 
 	database.SetDB(e.DB)
+}
+
+// setupRedis configures the Redis container and client.
+func (e *Environment) setupRedis(t *testing.T) {
+	t.Helper()
+
+	var container *redistest.Container
+	var err error
+
+	if e.config.containerRedis != nil {
+		container = e.config.containerRedis
+	} else {
+		container, err = redistest.SetupRedis(t, e.config.optionsRedis...)
+		if err != nil {
+			t.Fatalf("failed to setup redis: %v", err)
+		}
+	}
+
+	e.containerRedis = container
+	e.Redis = container.Client()
+}
+
+// FlushRedis removes all keys from the Redis instance.
+func (e *Environment) FlushRedis() {
+	if e.containerRedis != nil {
+		_ = e.containerRedis.FlushAll()
+	}
 }
 
 // setupHTTPServer creates an httptest.Server for the test.

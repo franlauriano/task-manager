@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"taskmanager/internal/platform/testing/dbtest"
+	"taskmanager/internal/platform/testing/redistest"
 	"taskmanager/internal/platform/testing/venomtest"
 )
 
@@ -24,6 +25,22 @@ func WithNewDatabase(opts ...dbtest.Option) Option {
 	}
 }
 
+// WithRedis passes an existing Redis container to the test environment.
+func WithRedis(container *redistest.Container) Option {
+	return func(c *Config) {
+		c.containerRedis = container
+		c.needsRedis = true
+	}
+}
+
+// WithNewRedis creates a new Redis container for the test environment.
+func WithNewRedis(opts ...redistest.Option) Option {
+	return func(c *Config) {
+		c.needsRedis = true
+		c.optionsRedis = opts
+	}
+}
+
 // WithHTTPServer enables an HTTP test server; the given handler is used to create it.
 func WithHTTPServer(handler http.Handler) Option {
 	return func(c *Config) {
@@ -32,8 +49,8 @@ func WithHTTPServer(handler http.Handler) Option {
 	}
 }
 
-// WithVenom enables Venom test suites.
-func WithVenom(opts ...venomtest.Option) Option {
+// WithAPITest enables API test suites using Venom.
+func WithAPITest(opts ...venomtest.Option) Option {
 	return func(c *Config) {
 		c.needsVenom = true
 		c.venomOptions = opts
