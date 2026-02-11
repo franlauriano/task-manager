@@ -1,5 +1,7 @@
 module taskmanager
 
+go 1.26
+
 require (
 	github.com/go-chi/chi/v5 v5.2.4
 	github.com/google/go-cmp v0.7.0
@@ -179,5 +181,3 @@ require (
 	modernc.org/strutil v1.2.0 // indirect
 	modernc.org/token v1.1.0 // indirect
 )
-
-go 1.25
