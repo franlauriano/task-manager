@@ -1,0 +1,130 @@
+name: List Tasks API Test - Success (Data Consistency after Mutations)
+version: "1.0"
+testcases:
+  - name: List tasks - data consistency after create
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks?page=1&limit=50"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.total_items ShouldEqual 14
+
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Data consistency test task",
+            "description": "Task created to verify list reflects new items"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.title ShouldEqual "Data consistency test task"
+
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks?page=1&limit=50"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.total_items ShouldEqual 15
+
+  - name: List tasks - data consistency after delete
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks?page=1&limit=50"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+
+      - type: http
+        method: DELETE
+        url: "{{.base_url}}/api/tasks/123e4567-e89b-12d3-a456-426614174000"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks?page=1&limit=50"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.total_items ShouldEqual 14
+
+  - name: List tasks - data consistency after status update
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks?page=1&limit=50&status=to_do"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+
+      - type: http
+        method: POST
+        url: "{{.base_url}}/api/tasks/223e4567-e89b-12d3-a456-426614174000/status"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "status": "in_progress"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks?page=1&limit=50&status=to_do"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.total_items ShouldEqual 4
+
+  - name: List tasks - data consistency after update
+    steps:
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks?page=1&limit=50"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200
+
+      - type: http
+        method: PUT
+        url: "{{.base_url}}/api/tasks/123e4567-e89b-12d3-a456-426614174004"
+        headers:
+          Content-Type: "application/json"
+          Accept: "application/json"
+        body: |
+          {
+            "title": "Updated title for data consistency test",
+            "description": "Updated description for data consistency test"
+          }
+        assertions:
+          - result.statuscode ShouldEqual 200
+          - result.bodyjson.title ShouldEqual "Updated title for data consistency test"
+
+      - type: http
+        method: GET
+        url: "{{.base_url}}/api/tasks?page=1&limit=50"
+        headers:
+          Accept: "application/json"
+        assertions:
+          - result.statuscode ShouldEqual 200

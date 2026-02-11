@@ -13,6 +13,7 @@ import (
 
 func resetWithMinimalData(env *testenv.Environment) {
 	dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
+	env.FlushRedis()
 }
 
 func TestCreateTask(t *testing.T) {
@@ -21,6 +22,7 @@ func TestCreateTask(t *testing.T) {
 			databaseTest,
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
+		testenv.WithRedis(redisTest),
 		testenv.WithHTTPServer(Routes()),
 		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
@@ -59,6 +61,7 @@ func TestUpdateTask(t *testing.T) {
 			databaseTest,
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
+		testenv.WithRedis(redisTest),
 		testenv.WithHTTPServer(Routes()),
 		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
@@ -98,6 +101,7 @@ func TestDeleteTask(t *testing.T) {
 			databaseTest,
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
+		testenv.WithRedis(redisTest),
 		testenv.WithHTTPServer(Routes()),
 		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
@@ -135,6 +139,7 @@ func TestRetrieveTask(t *testing.T) {
 			databaseTest,
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
+		testenv.WithRedis(redisTest),
 		testenv.WithHTTPServer(Routes()),
 		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
@@ -171,6 +176,7 @@ func TestListTasks(t *testing.T) {
 			databaseTest,
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
+		testenv.WithRedis(redisTest),
 		testenv.WithHTTPServer(Routes()),
 		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
@@ -187,6 +193,7 @@ func TestListTasks(t *testing.T) {
 		{"with success (basic)", func() { resetWithMinimalData(env) }, "success/tasks/list/basic.yml"},
 		{"with success (edge cases)", func() { resetWithMinimalData(env) }, "success/tasks/list/edge_cases.yml"},
 		{"with success (corner cases)", func() { resetWithMinimalData(env) }, "success/tasks/list/corner_cases.yml"},
+		{"with success (data consistency)", func() { resetWithMinimalData(env) }, "success/tasks/list/list_data_consistency.yml"},
 		// Failure
 		{"with bad request", func() { resetWithMinimalData(env) }, "failure/tasks/list/bad_request.yml"},
 	}
@@ -207,6 +214,7 @@ func TestUpdateTaskStatus(t *testing.T) {
 			databaseTest,
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
+		testenv.WithRedis(redisTest),
 		testenv.WithHTTPServer(Routes()),
 		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),

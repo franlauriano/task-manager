@@ -123,7 +123,7 @@ HTTP Response
 
 ## Tecnologias e Ferramentas
 
-- **Linguagem**: Go 1.25
+- **Linguagem**: Go 1.26
 - **Framework Web**: Chi (go-chi/chi)
 - **ORM**: GORM
 - **Banco de Dados**: PostgreSQL
@@ -228,7 +228,8 @@ task-manager/  # Raiz do projeto
 │   │   │
 │   │   ├── 📂 task/                          # Repositório de Tasks
 │   │   │   ├── persist.go                    # Interface Persistent e implementação PostgreSQL
-│   │   │   ├── cache.go                      # Cache Redis para tarefas
+│   │   │   ├── cache.go                      # Cache-aside Redis para ListPaginated
+│   │   │   ├── cache_mock.go                 # Mock de cache para testes de usecase
 │   │   │   ├── persist_test.go               # Testes de persistência
 │   │   │   ├── cache_test.go                 # Testes de cache
 │   │   │   ├── persist_mock.go               # Mock para testes
@@ -263,9 +264,12 @@ task-manager/  # Raiz do projeto
 │   │   │   └── server.go                     # Inicialização do servidor
 │   │   │
 │   │   └── 📂 testing/                       # Infraestrutura de testes
-│   │       ├── 📂 testenv/                   # Environment unificado (DB + HTTP + Venom)
-│   │       │   ├── environment.go            # Setup centralizado de ambientes de teste
-│   │       │   └── options.go                # Functional options (WithDatabase, WithNewDatabase, WithHTTPServer, etc)
+│   │       ├── 📂 testenv/                   # Environment unificado (DB + Redis + HTTP + Venom)
+│   │       │   ├── environment.go            # Setup centralizado, FlushRedis() para isolamento
+│   │       │   └── options.go                # WithDatabase, WithNewDatabase, WithRedis, WithNewRedis, WithHTTPServer, WithAPITest
+│   │       ├── 📂 redistest/                 # Redis testing (container Testcontainers)
+│   │       │   ├── redis.go                  # SetupRedis, TeardownRedis, FlushAll
+│   │       │   └── options.go                # Functional options
 │   │       ├── 📂 dbtest/                    # Database testing utilities
 │   │       │   ├── postgres.go               # Container PostgreSQL otimizado (testcontainers)
 │   │       │   ├── options.go                # WithImage, WithMigrations
@@ -293,7 +297,13 @@ task-manager/  # Raiz do projeto
 │   │   │   ├── 📂 delete/                    # DELETE /api/tasks/{uuid}
 │   │   │   │   ├── basic.yml                 # Casos básicos de exclusão
 │   │   │   │   └── corner_cases.yml          # Casos especiais
-│   │   │   └── ...                           # (outros: retrieve, list, status)
+│   │   │   ├── 📂 list/                      # GET /api/tasks
+│   │   │   │   ├── basic.yml                 # Casos básicos de listagem
+│   │   │   │   ├── edge_cases.yml            # Casos extremos
+│   │   │   │   ├── corner_cases.yml          # Casos especiais
+│   │   │   │   └── list_data_consistency.yml # Lista reflete mutações (create/delete/update/status)
+│   │   │   ├── 📂 retrieve/                  # GET /api/tasks/{uuid}
+│   │   │   ├── 📂 status/                    # POST /api/tasks/{uuid}/status
 │   │   └── 📂 teams/                         # Testes de endpoints de Teams
 │   │       ├── 📂 create/                    # POST /api/teams
 │   │       │   ├── basic.yml                 # Casos básicos de criação
@@ -420,7 +430,7 @@ task-manager/  # Raiz do projeto
 - **task/**: Repositório de Tasks
   - Interface `Persistent` define contratos (Create, RetrieveByUUID, Update, Delete, ListPaginated, UpdateStatus, ListByTeamID)
   - Implementação `datasource` usa PostgreSQL via GORM
-  - Cache via Redis (`cache.go`) para consultas de tarefas
+  - Cache-aside via Redis (`cache.go`): `ListPaginated` consulta cache primeiro; invalidação em Create, Update, Delete, UpdateStatus
   - Injeção via `SetPersist()` para testes
   - Acesso ao banco via `database.DBFromContext()`
   
@@ -668,15 +678,16 @@ t.Run(tt.name, func(t *testing.T) {
 })
 ```
 
-**Testes de transport** — TRUNCATE + fixtures entre subtestes. O middleware comita transações em caso de sucesso (comportamento real da API), então dados persistem e o estado é resetado:
+**Testes de transport** — TRUNCATE + fixtures + flush Redis entre subtestes. O middleware comita transações em caso de sucesso (comportamento real da API), então dados persistem e o estado é resetado:
 
 ```go
 resetWithMinimalData := func() {
     dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
+    env.FlushRedis()  // Limpa cache para isolamento entre subtestes
 }
 
 t.Run(tc.name, func(t *testing.T) {
-    resetWithMinimalData()            // TRUNCATE + INSERT fixtures
+    resetWithMinimalData()            // TRUNCATE + INSERT fixtures + flush Redis
     env.RunAPISuite(t, tc.suitePath)  // HTTP request → middleware commit → dados persistem
 })
 ```
@@ -685,17 +696,21 @@ t.Run(tc.name, func(t *testing.T) {
 
 #### testenv — Setup unificado
 
-Combina DB, HTTP e Venom em um único `Setup()`. Cleanup automático via `t.Cleanup()`.
+Combina DB, Redis, HTTP e Venom em um único `Setup()`. Cleanup automático via `t.Cleanup()`.
 
-Options: `WithDatabase` / `WithNewDatabase`, `WithHTTPServer`, `WithAPITest`.
+Options: `WithDatabase` / `WithNewDatabase`, `WithRedis` / `WithNewRedis`, `WithHTTPServer`, `WithAPITest`.
 
 ```go
 env := testenv.Setup(t,
     testenv.WithDatabase(databaseTest, dbtest.WithMigrations(paths.MigrationDir())),
+    testenv.WithRedis(redisTest),  // Necessário para testes que usam cache (ex: task handler)
     testenv.WithHTTPServer(Routes()),
     testenv.WithAPITest(venomtest.WithSuiteRoot(paths.APITestDir()), venomtest.WithVerbose(1)),
 )
-resetWithMinimalData := func() { dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql") }
+resetWithMinimalData := func() {
+    dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
+    env.FlushRedis()
+}
 // Em cada subteste: if tc.setup != nil { tc.setup() }; env.RunAPISuite(t, tc.suitePath)
 ```
 
@@ -720,10 +735,11 @@ Execução de suites Venom YAML. Options: `WithSuiteRoot(path)`, `WithVerbose(le
 
 #### Um container por pacote (TestMain)
 
-Cada pacote que precisa de banco cria **um único container** no `TestMain`, compartilhado por todos os testes daquele pacote:
+Cada pacote que precisa de banco cria **um único container** no `TestMain`, compartilhado por todos os testes daquele pacote. Pacotes de transport e repository/task também criam um container Redis para testes de cache:
 
 ```go
 var databaseTest *dbtest.Container
+var redisTest *redistest.Container
 
 func TestMain(m *testing.M) {
     os.Exit(func(m *testing.M) int {
@@ -739,12 +755,25 @@ func TestMain(m *testing.M) {
                 log.Printf("Failed to teardown database: %v", err)
             }
         }()
+
+        // Redis para testes de cache (transport, repository/task)
+        if redisTest, err = redistest.SetupRedis(nil); err != nil {
+            log.Fatalf("Failed to setup redis: %v", err)
+        }
+        defer func() {
+            if err := redisTest.TeardownRedis(); err != nil {
+                log.Printf("Failed to teardown redis: %v", err)
+            }
+        }()
+        cache.SetClient(redisTest.Client())
+        taskRepo.SetPersist(taskRepo.NewCachedPersist(taskRepo.Persist(), redisTest.Client(), 5*time.Minute))
+
         return m.Run()
     }(m))
 }
 ```
 
-Os testes recebem o container via `testenv.WithDatabase(databaseTest)`. Se não houver container no `TestMain`, use `WithNewDatabase(...)` para criar um novo.
+Os testes recebem os containers via `testenv.WithDatabase(databaseTest)` e `testenv.WithRedis(redisTest)`. Se não houver container no `TestMain`, use `WithNewDatabase(...)` ou `WithNewRedis(...)` para criar novos.
 
 #### Paralelismo entre pacotes
 

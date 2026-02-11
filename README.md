@@ -33,20 +33,20 @@ Esta API permite gerenciar tarefas e equipes, com funcionalidades como:
 
 ## Tecnologias
 
-- **Linguagem**: Go 1.25
+- **Linguagem**: Go 1.26
 - **Framework Web**: Chi (go-chi/chi)
 - **ORM**: GORM
 - **Banco de Dados**: PostgreSQL 18
 - **Cache**: Redis 8
 - **Configuração**: pelletier/go-toml/v2 (TOML parsing com expansão de variáveis de ambiente)
 - **Logging**: slog (structured logging)
-- **Testes**: Go testing package, Testcontainers (PostgreSQL em testes) e Venom (testes de API)
+- **Testes**: Go testing package, Testcontainers (PostgreSQL e Redis em testes) e Venom (testes de API)
 - **Containerização**: Docker Compose (postgres, redis, migrate)
 - **Migrações**: SQL direto (up/down)
 
 ## Pré-requisitos
 
-- Go 1.25 ou superior
+- Go 1.26 ou superior
 - Docker e Docker Compose
 - Make (opcional, mas recomendado)
 - Air (para live reload durante desenvolvimento)
@@ -142,7 +142,7 @@ A API estará disponível em `http://localhost:8090`
 
 ## Testes
 
-Os testes utilizam **Testcontainers** para subir um PostgreSQL automaticamente. Não é necessário subir banco de testes nem executar migrações manualmente.
+Os testes utilizam **Testcontainers** para subir PostgreSQL e Redis automaticamente. Não é necessário subir banco de dados nem Redis manualmente para executar os testes.
 
 ### Testes unitários e de integração
 

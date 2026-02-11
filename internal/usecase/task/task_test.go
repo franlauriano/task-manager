@@ -281,6 +281,36 @@ func TestCreate(t *testing.T) {
 			},
 			nil,
 		},
+		{
+			"Create task with cached persist",
+			func() {
+				taskRepo.SetPersist(taskRepo.NewMockCachedPersist(&taskRepo.MockPersistent{
+					FnCreate: func(ctx context.Context, t *taskEntity.Task) error { return nil },
+				}))
+			},
+			context.Background(),
+			&taskEntity.Task{
+				Title:       "Nova tarefa",
+				Description: "Descrição da nova tarefa",
+			},
+			nil,
+		},
+		{
+			"Create task with cached persist error",
+			func() {
+				taskRepo.SetPersist(taskRepo.NewMockCachedPersist(&taskRepo.MockPersistent{
+					FnCreate: func(ctx context.Context, t *taskEntity.Task) error {
+						return errors.New("database connection failed")
+					},
+				}))
+			},
+			context.Background(),
+			&taskEntity.Task{
+				Title:       "Nova tarefa",
+				Description: "Descrição válida",
+			},
+			errors.New("database connection failed"),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -377,6 +407,44 @@ func TestRetrieveByUUID(t *testing.T) {
 			uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
 			nil,
 			errors.New("database connection failed"),
+		},
+		{
+			"Retrieve task by UUID with cached persist",
+			func() {
+				taskRepo.SetPersist(taskRepo.NewMockCachedPersist(&taskRepo.MockPersistent{
+					FnRetrieveByUUID: func(ctx context.Context, taskUUID uuid.UUID) (*taskEntity.Task, error) {
+						return &taskEntity.Task{
+							UUID:        uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+							Title:       "Implementar autenticação",
+							Description: "Criar sistema de autenticação JWT para a API",
+							Status:      taskEntity.StatusTodo,
+						}, nil
+					},
+				}))
+			},
+			context.Background(),
+			uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+			&taskEntity.Task{
+				UUID:        uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+				Title:       "Implementar autenticação",
+				Description: "Criar sistema de autenticação JWT para a API",
+				Status:      taskEntity.StatusTodo,
+			},
+			nil,
+		},
+		{
+			"Retrieve task by UUID with cached persist not found",
+			func() {
+				taskRepo.SetPersist(taskRepo.NewMockCachedPersist(&taskRepo.MockPersistent{
+					FnRetrieveByUUID: func(ctx context.Context, taskUUID uuid.UUID) (*taskEntity.Task, error) {
+						return nil, errs.ErrNotFound
+					},
+				}))
+			},
+			context.Background(),
+			uuid.MustParse("00000000-0000-0000-0000-000000000000"),
+			nil,
+			errs.ErrNotFound,
 		},
 	}
 	for _, tt := range tests {
@@ -845,6 +913,66 @@ func TestUpdate(t *testing.T) {
 			},
 			nil,
 		},
+		{
+			"Update task with cached persist - title and description",
+			func() {
+				taskRepo.SetPersist(taskRepo.NewMockCachedPersist(&taskRepo.MockPersistent{
+					FnRetrieveByUUID: func(ctx context.Context, taskUUID uuid.UUID) (*taskEntity.Task, error) {
+						return &taskEntity.Task{
+							UUID:        uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+							Title:       "Título original",
+							Description: "Descrição original",
+							Status:      taskEntity.StatusTodo,
+						}, nil
+					},
+					FnUpdate: func(ctx context.Context, taskUUID uuid.UUID, t *taskEntity.Task) error {
+						return nil
+					},
+				}))
+			},
+			context.Background(),
+			uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+			map[string]any{
+				"title":       "Título atualizado",
+				"description": "Descrição atualizada",
+			},
+			&taskEntity.Task{
+				UUID:        uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+				Title:       "Título atualizado",
+				Description: "Descrição atualizada",
+				Status:      taskEntity.StatusTodo,
+			},
+			nil,
+		},
+		{
+			"Update task with cached persist - validation error",
+			func() {
+				taskRepo.SetPersist(taskRepo.NewMockCachedPersist(&taskRepo.MockPersistent{
+					FnRetrieveByUUID: func(ctx context.Context, taskUUID uuid.UUID) (*taskEntity.Task, error) {
+						return &taskEntity.Task{
+							UUID:        uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+							Title:       "Título original",
+							Description: "Descrição original",
+							Status:      taskEntity.StatusTodo,
+						}, nil
+					},
+				}))
+			},
+			context.Background(),
+			uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+			map[string]any{
+				"title": "",
+			},
+			nil,
+			&errs.ValidationErrors{
+				Errors: []errs.ValidationError{
+					{
+						Field:   "title",
+						Message: "title is required",
+					},
+				},
+			},
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -911,6 +1039,32 @@ func TestDelete(t *testing.T) {
 						return errors.New("database connection failed")
 					},
 				})
+			},
+			context.Background(),
+			uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+			errors.New("database connection failed"),
+		},
+		{
+			"Delete task with cached persist",
+			func() {
+				taskRepo.SetPersist(taskRepo.NewMockCachedPersist(&taskRepo.MockPersistent{
+					FnDelete: func(ctx context.Context, taskUUID uuid.UUID) error {
+						return nil
+					},
+				}))
+			},
+			context.Background(),
+			uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+			nil,
+		},
+		{
+			"Delete task with cached persist error",
+			func() {
+				taskRepo.SetPersist(taskRepo.NewMockCachedPersist(&taskRepo.MockPersistent{
+					FnDelete: func(ctx context.Context, taskUUID uuid.UUID) error {
+						return errors.New("database connection failed")
+					},
+				}))
 			},
 			context.Background(),
 			uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
@@ -1427,6 +1581,220 @@ func TestListPaginated(t *testing.T) {
 			},
 			nil,
 		},
+		{
+			"ListPaginated with cached persist - cache hit returns cached data",
+			func() {
+				Config.ListDefaultLimit = 20
+				Config.ListMaxLimit = 50
+				callCount := 0
+				taskRepo.SetPersist(taskRepo.NewMockCachedPersist(&taskRepo.MockPersistent{
+					FnListPaginated: func(ctx context.Context, statusFilter *taskEntity.TaskStatus, page, limit int) (*taskEntity.ListTasks, error) {
+						callCount++
+						return &taskEntity.ListTasks{
+							Page:       1,
+							Limit:      10,
+							Tasks:      []taskEntity.Task{},
+							TotalItems: callCount * 100,
+						}, nil
+					},
+				}))
+				// Pre-populate cache (callCount becomes 1, TotalItems: 100)
+				ListPaginated(context.Background(), nil, 1, 10)
+			},
+			context.Background(),
+			nil,
+			1,
+			10,
+			// Cache hit: returns cached data with TotalItems: 100 (not 200)
+			&taskEntity.ListTasks{
+				Page:       1,
+				Limit:      10,
+				Tasks:      []taskEntity.Task{},
+				TotalItems: 100,
+			},
+			nil,
+		},
+		{
+			"ListPaginated with cached persist - invalidation after Create",
+			func() {
+				Config.ListDefaultLimit = 20
+				Config.ListMaxLimit = 50
+				callCount := 0
+				taskRepo.SetPersist(taskRepo.NewMockCachedPersist(&taskRepo.MockPersistent{
+					FnListPaginated: func(ctx context.Context, statusFilter *taskEntity.TaskStatus, page, limit int) (*taskEntity.ListTasks, error) {
+						callCount++
+						return &taskEntity.ListTasks{
+							Page:       1,
+							Limit:      10,
+							Tasks:      []taskEntity.Task{},
+							TotalItems: callCount * 100,
+						}, nil
+					},
+					FnCreate: func(ctx context.Context, t *taskEntity.Task) error { return nil },
+				}))
+				// Pre-populate cache (callCount=1, TotalItems=100)
+				ListPaginated(context.Background(), nil, 1, 10)
+				// Create invalidates cache
+				Create(context.Background(), &taskEntity.Task{Title: "Nova tarefa", Description: "Descrição"})
+			},
+			context.Background(),
+			nil,
+			1,
+			10,
+			// Cache invalidated: mock called again (callCount=2, TotalItems=200)
+			&taskEntity.ListTasks{
+				Page:       1,
+				Limit:      10,
+				Tasks:      []taskEntity.Task{},
+				TotalItems: 200,
+			},
+			nil,
+		},
+		{
+			"ListPaginated with cached persist - invalidation after Delete",
+			func() {
+				Config.ListDefaultLimit = 20
+				Config.ListMaxLimit = 50
+				callCount := 0
+				taskRepo.SetPersist(taskRepo.NewMockCachedPersist(&taskRepo.MockPersistent{
+					FnListPaginated: func(ctx context.Context, statusFilter *taskEntity.TaskStatus, page, limit int) (*taskEntity.ListTasks, error) {
+						callCount++
+						return &taskEntity.ListTasks{
+							Page:       1,
+							Limit:      10,
+							Tasks:      []taskEntity.Task{},
+							TotalItems: callCount * 100,
+						}, nil
+					},
+					FnDelete: func(ctx context.Context, taskUUID uuid.UUID) error { return nil },
+				}))
+				ListPaginated(context.Background(), nil, 1, 10)
+				Delete(context.Background(), uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"))
+			},
+			context.Background(),
+			nil,
+			1,
+			10,
+			&taskEntity.ListTasks{
+				Page:       1,
+				Limit:      10,
+				Tasks:      []taskEntity.Task{},
+				TotalItems: 200,
+			},
+			nil,
+		},
+		{
+			"ListPaginated with cached persist - invalidation after UpdateStatus",
+			func() {
+				Config.ListDefaultLimit = 20
+				Config.ListMaxLimit = 50
+				callCount := 0
+				taskRepo.SetPersist(taskRepo.NewMockCachedPersist(&taskRepo.MockPersistent{
+					FnListPaginated: func(ctx context.Context, statusFilter *taskEntity.TaskStatus, page, limit int) (*taskEntity.ListTasks, error) {
+						callCount++
+						return &taskEntity.ListTasks{
+							Page:       1,
+							Limit:      10,
+							Tasks:      []taskEntity.Task{},
+							TotalItems: callCount * 100,
+						}, nil
+					},
+					FnRetrieveByUUID: func(ctx context.Context, taskUUID uuid.UUID) (*taskEntity.Task, error) {
+						return &taskEntity.Task{
+							UUID:        taskUUID,
+							Title:       "Tarefa",
+							Description: "Descrição",
+							Status:      taskEntity.StatusTodo,
+						}, nil
+					},
+					FnUpdateStatus: func(ctx context.Context, taskUUID uuid.UUID, updates map[string]any) error {
+						return nil
+					},
+				}))
+				ListPaginated(context.Background(), nil, 1, 10)
+				UpdateStatus(context.Background(), uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"), taskEntity.StatusInProgress)
+			},
+			context.Background(),
+			nil,
+			1,
+			10,
+			&taskEntity.ListTasks{
+				Page:       1,
+				Limit:      10,
+				Tasks:      []taskEntity.Task{},
+				TotalItems: 200,
+			},
+			nil,
+		},
+		{
+			"ListPaginated with cached persist - limit normalization shares cache entry",
+			func() {
+				Config.ListDefaultLimit = 10
+				Config.ListMaxLimit = 50
+				callCount := 0
+				taskRepo.SetPersist(taskRepo.NewMockCachedPersist(&taskRepo.MockPersistent{
+					FnListPaginated: func(ctx context.Context, statusFilter *taskEntity.TaskStatus, page, limit int) (*taskEntity.ListTasks, error) {
+						callCount++
+						return &taskEntity.ListTasks{
+							Page:       1,
+							Limit:      limit,
+							Tasks:      []taskEntity.Task{},
+							TotalItems: callCount * 100,
+						}, nil
+					},
+				}))
+				// Pre-populate cache with limit=0 (normalized to default 10)
+				ListPaginated(context.Background(), nil, 1, 0)
+			},
+			context.Background(),
+			nil,
+			1,
+			10,
+			// Cache hit: limit=10 matches the normalized limit=0 -> same cache key
+			&taskEntity.ListTasks{
+				Page:       1,
+				Limit:      10,
+				Tasks:      []taskEntity.Task{},
+				TotalItems: 100,
+			},
+			nil,
+		},
+		{
+			"ListPaginated with cached persist - error not cached",
+			func() {
+				Config.ListDefaultLimit = 20
+				Config.ListMaxLimit = 50
+				callCount := 0
+				taskRepo.SetPersist(taskRepo.NewMockCachedPersist(&taskRepo.MockPersistent{
+					FnListPaginated: func(ctx context.Context, statusFilter *taskEntity.TaskStatus, page, limit int) (*taskEntity.ListTasks, error) {
+						callCount++
+						if callCount == 1 {
+							return nil, errors.New("database connection failed")
+						}
+						return &taskEntity.ListTasks{
+							Page:       1,
+							Limit:      10,
+							Tasks:      []taskEntity.Task{},
+							TotalItems: 200,
+						}, nil
+					},
+				}))
+				// First call fails (error not cached)
+				ListPaginated(context.Background(), nil, 1, 10)
+			},
+			context.Background(),
+			nil,
+			1,
+			10,
+			// Second call succeeds (error was not cached)
+			&taskEntity.ListTasks{
+				Page:       1,
+				Limit:      10,
+				Tasks:      []taskEntity.Task{},
+				TotalItems: 200,
+			},
+			nil,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -1750,6 +2118,54 @@ func TestUpdateStatus(t *testing.T) {
 			uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
 			taskEntity.StatusInProgress,
 			errors.New("database connection failed"),
+		},
+		{
+			"UpdateStatus with cached persist - Todo to InProgress",
+			func() {
+				taskRepo.SetPersist(taskRepo.NewMockCachedPersist(&taskRepo.MockPersistent{
+					FnRetrieveByUUID: func(ctx context.Context, taskUUID uuid.UUID) (*taskEntity.Task, error) {
+						return &taskEntity.Task{
+							UUID:        uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+							Title:       "Tarefa",
+							Description: "Descrição",
+							Status:      taskEntity.StatusTodo,
+						}, nil
+					},
+					FnUpdateStatus: func(ctx context.Context, taskUUID uuid.UUID, updates map[string]any) error {
+						return nil
+					},
+				}))
+			},
+			context.Background(),
+			uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+			taskEntity.StatusInProgress,
+			nil,
+		},
+		{
+			"UpdateStatus with cached persist - invalid transition",
+			func() {
+				taskRepo.SetPersist(taskRepo.NewMockCachedPersist(&taskRepo.MockPersistent{
+					FnRetrieveByUUID: func(ctx context.Context, taskUUID uuid.UUID) (*taskEntity.Task, error) {
+						return &taskEntity.Task{
+							UUID:        uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+							Title:       "Tarefa",
+							Description: "Descrição",
+							Status:      taskEntity.StatusTodo,
+						}, nil
+					},
+				}))
+			},
+			context.Background(),
+			uuid.MustParse("123e4567-e89b-12d3-a456-426614174000"),
+			taskEntity.StatusDone,
+			&errs.ValidationErrors{
+				Errors: []errs.ValidationError{
+					{
+						Field:   "status",
+						Message: "invalid status transition",
+					},
+				},
+			},
 		},
 	}
 	for _, tt := range tests {

@@ -6,17 +6,22 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
 
 	"taskmanager/internal/paths"
+	"taskmanager/internal/platform/cache"
 	"taskmanager/internal/platform/database"
 	"taskmanager/internal/platform/logger"
 	"taskmanager/internal/platform/testing/dbtest"
+	"taskmanager/internal/platform/testing/redistest"
+	taskRepo "taskmanager/internal/repository/task"
 	"taskmanager/internal/testing/configtest"
 	"taskmanager/internal/usecase/task"
 	"taskmanager/internal/usecase/team"
 )
 
 var databaseTest *dbtest.Container
+var redisTest *redistest.Container
 
 func TestMain(m *testing.M) {
 	os.Exit(func(m *testing.M) int {
@@ -57,6 +62,24 @@ func TestMain(m *testing.M) {
 				log.Printf("Failed to teardown database: %v", err)
 			}
 		}()
+
+		// Setup Redis container for cache tests
+		if redisTest, err = redistest.SetupRedis(nil); err != nil {
+			log.Fatalf("Failed to setup redis: %v", err)
+		}
+		defer func() {
+			if err := redisTest.TeardownRedis(); err != nil {
+				log.Printf("Failed to teardown redis: %v", err)
+			}
+		}()
+
+		// Wire cache-aside decorator (mirrors production wiring in cmd/main.go)
+		cache.SetClient(redisTest.Client())
+		taskRepo.SetPersist(taskRepo.NewCachedPersist(
+			taskRepo.Persist(),
+			redisTest.Client(),
+			5*time.Minute,
+		))
 
 		return m.Run()
 	}(m))
