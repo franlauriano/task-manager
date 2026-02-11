@@ -79,7 +79,7 @@ A aplicação utiliza arquivos de configuração TOML e variáveis de ambiente.
 
 **Para a aplicação:**
 - `etc/config.toml`: Configuração principal (criado a partir de `etc/config.toml.example` se não existir)
-- `etc/.env`: Variáveis de ambiente (criado a partir de `etc/.env.exemple` se não existir). Ajuste `DATABASE_*`, `SERVER_*`, etc.
+- `etc/.env`: Variáveis de ambiente (criado a partir de `etc/.env.example` se não existir). Ajuste `DATABASE_*`, `SERVER_*`, etc.
 
 **Para testes:**
 - `etc/config_test.toml`: Configuração TOML para testes

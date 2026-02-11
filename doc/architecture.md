@@ -141,7 +141,7 @@ task-manager/  # Raiz do projeto
 ├── 📂 etc/                                   # Arquivos de Configuração
 │   ├── config.toml.example                   # Template de exemplo
 │   ├── config_test.toml                      # Configuração para testes
-│   ├── .env.exemple                          # Template de variáveis de ambiente
+│   ├── .env.example                          # Template de variáveis de ambiente
 │   ├── .env.test                             # Variáveis de ambiente (testes)
 │   └── air.toml                              # Configuração do Air (live reload)
 │
