@@ -15,7 +15,7 @@ import (
 
 func TestCreateTeam(t *testing.T) {
 	env := testenv.Setup(t,
-		testenv.WithContainerDatabase(
+		testenv.WithDatabase(
 			databaseTest,
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
@@ -57,7 +57,7 @@ func TestCreateTeam(t *testing.T) {
 
 func TestListTeams(t *testing.T) {
 	env := testenv.Setup(t,
-		testenv.WithContainerDatabase(
+		testenv.WithDatabase(
 			databaseTest,
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
@@ -95,7 +95,7 @@ func TestListTeams(t *testing.T) {
 
 func TestRetrieveTeam(t *testing.T) {
 	env := testenv.Setup(t,
-		testenv.WithContainerDatabase(
+		testenv.WithDatabase(
 			databaseTest,
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
@@ -135,7 +135,7 @@ func TestRetrieveTeam(t *testing.T) {
 
 func TestAssociateTaskToTeam(t *testing.T) {
 	env := testenv.Setup(t,
-		testenv.WithContainerDatabase(
+		testenv.WithDatabase(
 			databaseTest,
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
@@ -176,7 +176,7 @@ func TestAssociateTaskToTeam(t *testing.T) {
 
 func TestDisassociateTaskFromTeam(t *testing.T) {
 	env := testenv.Setup(t,
-		testenv.WithContainerDatabase(
+		testenv.WithDatabase(
 			databaseTest,
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),

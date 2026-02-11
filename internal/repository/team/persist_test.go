@@ -22,7 +22,7 @@ import (
 
 func Test_datasource_Create(t *testing.T) {
 	env := testenv.Setup(t,
-		testenv.WithContainerDatabaseAlias(databaseAliasTeamTest, databaseTest),
+		testenv.WithDatabase(databaseTest),
 	)
 
 	resetWithMinimalData := func() {
@@ -61,14 +61,14 @@ func Test_datasource_Create(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx, databaseAliasTeamTest)
+				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx)
 			}
 
 			if tt.setup != nil {
 				tt.setup()
 			}
 
-			p := &datasource{alias: databaseAliasTeamTest}
+			p := &datasource{}
 			err := p.Create(ctx, tt.team)
 			if diff := assert.CompareErrors(err, tt.wantErr); diff != "" {
 				t.Errorf("datasource.Create() error diff: %s", diff)
@@ -80,7 +80,7 @@ func Test_datasource_Create(t *testing.T) {
 
 func Test_datasource_RetrieveByUUID(t *testing.T) {
 	env := testenv.Setup(t,
-		testenv.WithContainerDatabaseAlias(databaseAliasTeamTest, databaseTest),
+		testenv.WithDatabase(databaseTest),
 	)
 
 	resetWithMinimalData := func() {
@@ -133,14 +133,14 @@ func Test_datasource_RetrieveByUUID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx, databaseAliasTeamTest)
+				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx)
 			}
 
 			if tt.setup != nil {
 				tt.setup()
 			}
 
-			p := &datasource{alias: databaseAliasTeamTest}
+			p := &datasource{}
 			got, err := p.RetrieveByUUID(ctx, tt.teamUUID)
 			if diff := assert.CompareErrors(err, tt.wantErr); diff != "" {
 				t.Errorf("datasource.RetrieveByUUID() error diff: %s", diff)
@@ -155,7 +155,7 @@ func Test_datasource_RetrieveByUUID(t *testing.T) {
 
 func Test_datasource_ListPaginated(t *testing.T) {
 	env := testenv.Setup(t,
-		testenv.WithContainerDatabaseAlias(databaseAliasTeamTest, databaseTest),
+		testenv.WithDatabase(databaseTest),
 	)
 
 	resetWithMinimalData := func() {
@@ -324,14 +324,14 @@ func Test_datasource_ListPaginated(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx, databaseAliasTeamTest)
+				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx)
 			}
 
 			if tt.setup != nil {
 				tt.setup()
 			}
 
-			p := &datasource{alias: databaseAliasTeamTest}
+			p := &datasource{}
 			got, err := p.ListPaginated(ctx, tt.page, tt.limit)
 			if diff := assert.CompareErrors(err, tt.wantErr); diff != "" {
 				t.Errorf("datasource.ListPaginated() error diff: %s", diff)
@@ -347,7 +347,7 @@ func Test_datasource_ListPaginated(t *testing.T) {
 
 func Test_datasource_RetrieveTaskTeamID(t *testing.T) {
 	env := testenv.Setup(t,
-		testenv.WithContainerDatabaseAlias(databaseAliasTeamTest, databaseTest),
+		testenv.WithDatabase(databaseTest),
 	)
 
 	resetWithMinimalData := func() {
@@ -410,14 +410,14 @@ func Test_datasource_RetrieveTaskTeamID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx, databaseAliasTeamTest)
+				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx)
 			}
 
 			if tt.setup != nil {
 				tt.setup()
 			}
 
-			p := &datasource{alias: databaseAliasTeamTest}
+			p := &datasource{}
 			got, err := p.RetrieveTaskTeamID(ctx, tt.taskUUID)
 			if diff := assert.CompareErrors(err, tt.wantErr); diff != "" {
 				t.Errorf("datasource.RetrieveTaskTeamID() error diff: %s", diff)
@@ -432,7 +432,7 @@ func Test_datasource_RetrieveTaskTeamID(t *testing.T) {
 
 func Test_datasource_UpdateTaskTeamID(t *testing.T) {
 	env := testenv.Setup(t,
-		testenv.WithContainerDatabaseAlias(databaseAliasTeamTest, databaseTest),
+		testenv.WithDatabase(databaseTest),
 	)
 
 	resetWithMinimalData := func() {
@@ -495,14 +495,14 @@ func Test_datasource_UpdateTaskTeamID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx, databaseAliasTeamTest)
+				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx)
 			}
 
 			if tt.setup != nil {
 				tt.setup()
 			}
 
-			p := &datasource{alias: databaseAliasTeamTest}
+			p := &datasource{}
 			err := p.UpdateTaskTeamID(ctx, tt.taskUUID, tt.teamID)
 			if diff := assert.CompareErrors(err, tt.wantErr); diff != "" {
 				t.Errorf("datasource.UpdateTaskTeamID() error diff: %s", diff)

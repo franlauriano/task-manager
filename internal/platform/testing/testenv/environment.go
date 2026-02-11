@@ -34,7 +34,6 @@ type Environment struct {
 type Config struct {
 	// Database options
 	needsDB     bool
-	aliasDB     string
 	containerDB *dbtest.Container
 	optionsDB   []dbtest.Option
 
@@ -65,7 +64,7 @@ func Setup(t *testing.T, opts ...Option) *Environment {
 	}
 
 	if cfg.needsDB {
-		env.setupDatabase(t, cfg.aliasDB)
+		env.setupDatabase(t)
 	}
 
 	if cfg.needsHTTP {
@@ -85,7 +84,7 @@ func (e *Environment) RunVenomSuite(t *testing.T, suitePath string) {
 }
 
 // setupDatabase configures the PostgreSQL container and connection.
-func (e *Environment) setupDatabase(t *testing.T, alias string) {
+func (e *Environment) setupDatabase(t *testing.T) {
 	t.Helper()
 
 	var container *dbtest.Container
@@ -103,7 +102,7 @@ func (e *Environment) setupDatabase(t *testing.T, alias string) {
 	e.container = container
 	e.DB = container.DB()
 
-	database.SetDB(alias, e.DB)
+	database.SetDB(e.DB)
 }
 
 // setupHTTPServer creates an httptest.Server for the test.

@@ -15,7 +15,7 @@ import (
 
 func TestCreateTask(t *testing.T) {
 	env := testenv.Setup(t,
-		testenv.WithContainerDatabase(
+		testenv.WithDatabase(
 			databaseTest,
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
@@ -57,7 +57,7 @@ func TestCreateTask(t *testing.T) {
 
 func TestUpdateTask(t *testing.T) {
 	env := testenv.Setup(t,
-		testenv.WithContainerDatabase(
+		testenv.WithDatabase(
 			databaseTest,
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
@@ -100,7 +100,7 @@ func TestUpdateTask(t *testing.T) {
 
 func TestDeleteTask(t *testing.T) {
 	env := testenv.Setup(t,
-		testenv.WithContainerDatabase(
+		testenv.WithDatabase(
 			databaseTest,
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
@@ -141,7 +141,7 @@ func TestDeleteTask(t *testing.T) {
 
 func TestRetrieveTask(t *testing.T) {
 	env := testenv.Setup(t,
-		testenv.WithContainerDatabase(
+		testenv.WithDatabase(
 			databaseTest,
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
@@ -181,7 +181,7 @@ func TestRetrieveTask(t *testing.T) {
 
 func TestListTasks(t *testing.T) {
 	env := testenv.Setup(t,
-		testenv.WithContainerDatabase(
+		testenv.WithDatabase(
 			databaseTest,
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
@@ -221,7 +221,7 @@ func TestListTasks(t *testing.T) {
 
 func TestUpdateTaskStatus(t *testing.T) {
 	env := testenv.Setup(t,
-		testenv.WithContainerDatabase(
+		testenv.WithDatabase(
 			databaseTest,
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),

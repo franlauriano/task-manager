@@ -44,7 +44,7 @@ func main() {
 	// Connect to database
 	database.Open(appConfig.Database)
 	defer func() {
-		if err := database.CloseAll(); err != nil {
+		if err := database.Close(); err != nil {
 			log.Print("Error closing database:", err)
 		}
 	}()

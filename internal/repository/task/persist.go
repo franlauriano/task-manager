@@ -7,7 +7,6 @@ import (
 	"taskmanager/internal/entity/task"
 	"taskmanager/internal/platform/database"
 	errs "taskmanager/internal/platform/errors"
-	"taskmanager/internal/repository"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -25,12 +24,10 @@ type Persistent interface {
 }
 
 // datasource implements the persistent interface using PostgreSQL
-type datasource struct {
-	alias string
-}
+type datasource struct{}
 
 // persist is the global persistent implementation
-var persist Persistent = &datasource{alias: repository.DatabaseAlias}
+var persist Persistent = &datasource{}
 
 // SetPersist sets the persistent implementation
 func SetPersist(p Persistent) {
@@ -44,7 +41,7 @@ func Persist() Persistent {
 
 // Create saves a new task to the datasource
 func (p *datasource) Create(ctx context.Context, t *task.Task) error {
-	db, err := database.DBFromContext(ctx, p.alias)
+	db, err := database.DBFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -58,7 +55,7 @@ func (p *datasource) Create(ctx context.Context, t *task.Task) error {
 
 // RetrieveByUUID retrieves a task by UUID from the datasource
 func (p *datasource) RetrieveByUUID(ctx context.Context, taskUUID uuid.UUID) (*task.Task, error) {
-	db, err := database.DBFromContext(ctx, p.alias)
+	db, err := database.DBFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -76,7 +73,7 @@ func (p *datasource) RetrieveByUUID(ctx context.Context, taskUUID uuid.UUID) (*t
 
 // Update updates an existing task in the datasource
 func (p *datasource) Update(ctx context.Context, taskUUID uuid.UUID, t *task.Task) error {
-	db, err := database.DBFromContext(ctx, p.alias)
+	db, err := database.DBFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -98,7 +95,7 @@ func (p *datasource) Update(ctx context.Context, taskUUID uuid.UUID, t *task.Tas
 
 // Delete performs a soft delete of a task in the datasource
 func (p *datasource) Delete(ctx context.Context, taskUUID uuid.UUID) error {
-	db, err := database.DBFromContext(ctx, p.alias)
+	db, err := database.DBFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -117,7 +114,7 @@ func (p *datasource) Delete(ctx context.Context, taskUUID uuid.UUID) error {
 
 // ListPaginated lists tasks with pagination and optional filters from the datasource
 func (p *datasource) ListPaginated(ctx context.Context, statusFilter *task.TaskStatus, page, limit int) (*task.ListTasks, error) {
-	db, err := database.DBFromContext(ctx, p.alias)
+	db, err := database.DBFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +147,7 @@ func (p *datasource) ListPaginated(ctx context.Context, statusFilter *task.TaskS
 
 // UpdateStatus updates only the status and timestamps in the datasource
 func (p *datasource) UpdateStatus(ctx context.Context, taskUUID uuid.UUID, updates map[string]any) error {
-	db, err := database.DBFromContext(ctx, p.alias)
+	db, err := database.DBFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -172,7 +169,7 @@ func (p *datasource) UpdateStatus(ctx context.Context, taskUUID uuid.UUID, updat
 
 // ListByTeamID lists all tasks associated with a team
 func (p *datasource) ListByTeamID(ctx context.Context, teamID uint) ([]task.Task, error) {
-	db, err := database.DBFromContext(ctx, p.alias)
+	db, err := database.DBFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}

@@ -7,7 +7,6 @@ import (
 	"taskmanager/internal/entity/team"
 	"taskmanager/internal/platform/database"
 	errs "taskmanager/internal/platform/errors"
-	"taskmanager/internal/repository"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
@@ -23,11 +22,9 @@ type Persistent interface {
 }
 
 // datasource implements the persistent interface using PostgreSQL
-type datasource struct {
-	alias string
-}
+type datasource struct{}
 
-var persist Persistent = &datasource{alias: repository.DatabaseAlias}
+var persist Persistent = &datasource{}
 
 // SetPersist sets the persistent implementation
 func SetPersist(p Persistent) {
@@ -41,7 +38,7 @@ func Persist() Persistent {
 
 // Create saves a new team to the database
 func (p *datasource) Create(ctx context.Context, t *team.Team) error {
-	db, err := database.DBFromContext(ctx, p.alias)
+	db, err := database.DBFromContext(ctx)
 	if err != nil {
 		return err
 	}
@@ -55,7 +52,7 @@ func (p *datasource) Create(ctx context.Context, t *team.Team) error {
 
 // RetrieveByUUID retrieves a team by UUID from the database
 func (p *datasource) RetrieveByUUID(ctx context.Context, teamUUID uuid.UUID) (*team.Team, error) {
-	db, err := database.DBFromContext(ctx, p.alias)
+	db, err := database.DBFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +70,7 @@ func (p *datasource) RetrieveByUUID(ctx context.Context, teamUUID uuid.UUID) (*t
 
 // ListPaginated lists teams with pagination from the database
 func (p *datasource) ListPaginated(ctx context.Context, page, limit int) (*team.ListTeams, error) {
-	db, err := database.DBFromContext(ctx, p.alias)
+	db, err := database.DBFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -102,7 +99,7 @@ func (p *datasource) ListPaginated(ctx context.Context, page, limit int) (*team.
 
 // RetrieveTaskTeamID retrieves the team_id of a task by UUID
 func (p *datasource) RetrieveTaskTeamID(ctx context.Context, taskUUID uuid.UUID) (*uint, error) {
-	db, err := database.DBFromContext(ctx, p.alias)
+	db, err := database.DBFromContext(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -125,7 +122,7 @@ func (p *datasource) RetrieveTaskTeamID(ctx context.Context, taskUUID uuid.UUID)
 
 // UpdateTaskTeamID updates the team_id of a task
 func (p *datasource) UpdateTaskTeamID(ctx context.Context, taskUUID uuid.UUID, teamID *uint) error {
-	db, err := database.DBFromContext(ctx, p.alias)
+	db, err := database.DBFromContext(ctx)
 	if err != nil {
 		return err
 	}

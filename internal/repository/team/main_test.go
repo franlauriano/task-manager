@@ -13,10 +13,6 @@ import (
 	"taskmanager/internal/testing/configtest"
 )
 
-const (
-	databaseAliasTeamTest = "team_test"
-)
-
 var databaseTest *dbtest.Container
 
 func TestMain(m *testing.M) {

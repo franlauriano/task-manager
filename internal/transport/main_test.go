@@ -47,7 +47,9 @@ func TestMain(m *testing.M) {
 
 		// Setup database container for all tests in this package
 		var err error
-		if databaseTest, err = dbtest.SetupDatabase(nil, dbtest.WithMigrations(paths.MigrationDir())); err != nil {
+		if databaseTest, err = dbtest.SetupDatabase(nil,
+			dbtest.WithMigrations(paths.MigrationDir()),
+		); err != nil {
 			log.Fatalf("Failed to setup database: %v", err)
 		}
 		defer func() {

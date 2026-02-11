@@ -206,8 +206,6 @@ task-manager/  # Raiz do projeto
 │   │
 │   ├── 📂 repository/                        # Camada de Repositório (Data Access)
 │   │   │
-│   │   ├── repository.go                     # Constantes compartilhadas (DatabaseAlias)
-│   │   │
 │   │   ├── 📂 task/                          # Repositório de Tasks
 │   │   │   ├── persist.go                    # Interface Persistent e implementação PostgreSQL
 │   │   │   ├── persist_test.go              # Testes de persistência
@@ -241,7 +239,7 @@ task-manager/  # Raiz do projeto
 │   │   └── 📂 testing/                       # Infraestrutura de testes
 │   │       ├── 📂 testenv/                   # Environment unificado (DB + HTTP + Venom)
 │   │       │   ├── environment.go            # Setup centralizado de ambientes de teste
-│   │       │   └── options.go                # Functional options (WithDatabase, WithContainerDatabase, WithHTTPServer, etc)
+│   │       │   └── options.go                # Functional options (WithDatabase, WithNewDatabase, WithHTTPServer, etc)
 │   │       ├── 📂 dbtest/                    # Database testing utilities
 │   │       │   ├── postgres.go               # Container PostgreSQL otimizado (testcontainers)
 │   │       │   ├── options.go                # WithImage, WithMigrations
@@ -393,7 +391,6 @@ task-manager/  # Raiz do projeto
 - Mapear entidades para tabelas
 
 **Componentes:**
-- **repository.go**: Constantes compartilhadas (`DatabaseAlias`)
 - **task/**: Repositório de Tasks
   - Interface `Persistent` define contratos (Create, RetrieveByUUID, Update, Delete, ListPaginated, UpdateStatus, ListByTeamID)
   - Implementação `datasource` usa PostgreSQL via GORM
@@ -693,11 +690,11 @@ flowchart TB
 
 ### Infraestrutura de testes (Go)
 
-- **testenv**: Setup unificado com `WithDatabase` ou `WithContainerDatabase`, `WithHTTPServer`, `WithVenom`. `env.RunVenomSuite(t, suitePath)` para suites Venom (exige `WithHTTPServer` + `WithVenom`). Cleanup via `t.Cleanup()`. Entre subtestes use `dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")` para garantir estado limpo.
+- **testenv**: Setup unificado com `WithDatabase` ou `WithNewDatabase`, `WithHTTPServer`, `WithVenom`. `env.RunVenomSuite(t, suitePath)` para suites Venom (exige `WithHTTPServer` + `WithVenom`). Cleanup via `t.Cleanup()`. Entre subtestes use `dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")` para garantir estado limpo.
 
 ```go
 env := testenv.Setup(t,
-    testenv.WithContainerDatabase(databaseTest, dbtest.WithMigrations(paths.MigrationDir())),
+    testenv.WithDatabase(databaseTest, dbtest.WithMigrations(paths.MigrationDir())),
     testenv.WithHTTPServer(Routes()),
     testenv.WithVenom(venomtest.WithSuiteRoot(paths.APITestDir()), venomtest.WithVerbose(1)),
 )
@@ -715,53 +712,111 @@ err := p.Create(ctx, task)
 - **assert**: `CompareErrors(got, want)` retorna diff string (vazia se iguais); `cmp.Diff` para valores. Permite controlar quando falhar e mensagens por contexto.
 - **Container PostgreSQL**: flags `fsync=off`, `synchronous_commit=off`, `full_page_writes=off` e tmpfs em `/var/lib/postgresql` — ~2–3x mais rápido, dados em memória.
 
-### Otimização de Performance
+### Testcontainers e Paralelismo Entre Pacotes
 
-A implementação utiliza estratégias para acelerar a execução de testes com Testcontainers:
+#### Modelo de execução do `go test`
 
-#### 1. Padrão Singleton via TestMain
+O `go test` compila cada pacote em um **binário separado** e executa cada um como um **processo independente do sistema operacional**. Isso significa que pacotes rodando em paralelo possuem:
 
-- **Container compartilhado**: Um único container PostgreSQL é criado por pacote de testes via `TestMain` e reutilizado em todos os testes
-- **Controle explícito**: Cada pacote controla seu próprio container através de uma variável local (`databaseTest`)
-- **Cleanup automático**: Container é destruído apenas quando todos os testes do pacote terminam
-- **Redução de tempo**: De ~30s por teste (startup container) para ~100ms (limpeza TRUNCATE)
+- **PIDs diferentes** — processos distintos no SO
+- **Espaços de memória isolados** — variáveis globais não são compartilhadas entre pacotes
+- **Containers Docker independentes** — cada `TestMain` cria seu próprio container PostgreSQL com porta aleatória
+
+```
+go test ./internal/repository/task/... ./internal/repository/team/... ./internal/transport/...
+
+┌─────────────────────────┐  ┌─────────────────────────┐  ┌─────────────────────────┐
+│ Processo 1 (PID 12345)  │  │ Processo 2 (PID 12346)  │  │ Processo 3 (PID 12347)  │
+│ repository/task         │  │ repository/team         │  │ transport               │
+│                         │  │                         │  │                         │
+│ Memória própria         │  │ Memória própria         │  │ Memória própria         │
+│ database.SetDB(db) ─┐   │  │ database.SetDB(db) ─┐   │  │ database.SetDB(db) ─┐   │
+│                     │   │  │                     │   │  │                     │   │
+│ Container A ◄───────┘   │  │ Container B ◄───────┘   │  │ Container C ◄───────┘   │
+│ postgres:18-alpine      │  │ postgres:18-alpine      │  │ postgres:18-alpine      │
+│ porta 55432             │  │ porta 55489             │  │ porta 55501             │
+└─────────────────────────┘  └─────────────────────────┘  └─────────────────────────┘
+         ▲                            ▲                            ▲
+         │                            │                            │
+         └── Sem referência cruzada ──┴── Isolamento total ────────┘
+```
+
+Quando `repository/task` derruba seu container, o container de `repository/team` continua rodando normalmente. O `go test` controla o grau de paralelismo entre pacotes via flag `-p` (padrão: `GOMAXPROCS`).
+
+#### Container por pacote via TestMain
+
+Cada pacote que precisa de banco cria **um único container** no `TestMain`, compartilhado por todos os testes daquele pacote. O container é destruído ao final da execução do pacote:
 
 ```go
-// No TestMain do pacote
 var databaseTest *dbtest.Container
 
 func TestMain(m *testing.M) {
-    var err error
-    if databaseTest, err = dbtest.SetupDatabase(nil, dbtest.WithMigrations(paths.MigrationDir())); err != nil {
-        log.Fatalf("Failed to setup database: %v", err)
-    }
-    defer func() {
-        if err := databaseTest.TeardownDatabase(); err != nil {
-            log.Printf("Failed to teardown database: %v", err)
-        }
-    }()
-    m.Run()
-}
+    os.Exit(func(m *testing.M) int {
+        // ... load config ...
 
-// Nos testes - container do TestMain é passado explicitamente
+        var err error
+        if databaseTest, err = dbtest.SetupDatabase(nil,
+            dbtest.WithMigrations(paths.MigrationDir()),
+        ); err != nil {
+            log.Fatalf("Failed to setup database: %v", err)
+        }
+        defer func() {
+            if err := databaseTest.TeardownDatabase(); err != nil {
+                log.Printf("Failed to teardown database: %v", err)
+            }
+        }()
+
+        return m.Run()
+    }(m))
+}
+```
+
+Os testes recebem o container via `testenv.WithDatabase(databaseTest)`, que registra a conexão no pacote `database` global (do processo):
+
+```go
 env := testenv.Setup(t,
-    testenv.WithContainerDatabase(databaseTest),
+    testenv.WithDatabase(databaseTest),
 )
 ```
 
-#### 2. Gerenciamento de Estado Entre Testes
+#### Otimizações do container de teste
 
-- **Limpeza via TRUNCATE**: Em vez de destruir o container, apenas limpa os dados entre testes usando `TRUNCATE table_name RESTART IDENTITY CASCADE`
-- **Limpeza automática**: Registrada via `t.Cleanup()` quando usando container compartilhado
-- **Thread-safe**: Usa mutex para garantir que apenas um teste limpe por vez em execução paralela
-- **Performance**: Limpeza de tabelas é milissegundos mais rápida que reiniciar container
+O container PostgreSQL é configurado para máxima velocidade, sacrificando durabilidade (aceitável em testes):
 
-#### 3. Gerenciamento de Estado
+| Configuração | Efeito |
+|---|---|
+| `fsync=off` | Não sincroniza para disco |
+| `synchronous_commit=off` | Não espera flush do WAL |
+| `full_page_writes=off` | Não escreve páginas completas |
+| `tmpfs /var/lib/postgresql` | Dados em memória RAM |
 
-- **Limpeza automática**: O estado do banco é limpo entre testes usando `CleanDatabase()` que faz TRUNCATE em todas as tabelas
-- **Isolamento**: Cada teste começa com um banco limpo, garantindo que não haja interferência entre testes
+#### Isolamento entre testes dentro do pacote
 
-#### 4. Seed vs Fixtures
+**Testes de repository** — isolamento via transação com rollback automático:
+
+```go
+t.Run(tt.name, func(t *testing.T) {
+    ctx := dbtest.SetupDBWithTransaction(t, tt.ctx)
+    // BEGIN transaction
+    // ... operações do teste ...
+    // t.Cleanup → ROLLBACK (dados nunca persistem)
+})
+```
+
+**Testes de transport** — isolamento via TRUNCATE + fixtures. O middleware comita transações em caso de sucesso (comportamento real da API), então dados persistem e o estado é resetado entre subtestes:
+
+```go
+resetWithMinimalData := func() {
+    dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
+}
+
+t.Run(tt.name, func(t *testing.T) {
+    resetWithMinimalData()         // TRUNCATE + INSERT fixtures
+    env.RunVenomSuite(t, tt.path)  // HTTP request → middleware commit → dados persistem
+})
+```
+
+#### Seed vs Fixtures
 
 - **Seed** (`db/seed/`): Dados para desenvolvimento e demonstração. Em ambiente local: `make seed` (roda `db/seed/populate.sql` no Postgres via Docker; depende de `migrate`).
 - **Fixtures** (`db/fixtures/`): Dados para testes. Carregado via `dbtest.LoadFixtures(db, paths.FixtureDir(), "arquivo.sql")` ou `dbtest.ResetWithFixtures(db, paths.FixtureDir(), "tasks_minimal.sql")` (limpa + carrega). Cada subteste deve chamar `ResetWithFixtures` no `setup` para garantir estado limpo.
@@ -771,4 +826,4 @@ env := testenv.Setup(t,
 
 - **Build tags**: `//go:build test` em testes que usam DB/containers. `go test -tags=test ./...` para suite completa; sem tag para unitários leves (ex. `task_test.go`).
 - **Boas práticas**: table-driven, `t.Run()` por caso, `t.Helper()` em helpers, `t.Cleanup()` para cleanup, isolamento por transação em testes de persistência.
-- **Container compartilhado**: Se inicializado no `TestMain` via `SetupDatabase()`, é passado explicitamente para os testes usando `WithContainerDatabase(databaseTest)`. Se não houver container no TestMain, use `WithDatabase(...)` para criar um novo container.
+- **Container compartilhado**: Se inicializado no `TestMain` via `SetupDatabase()`, é passado explicitamente para os testes usando `WithDatabase(databaseTest)`. Se não houver container no TestMain, use `WithNewDatabase(...)` para criar um novo container.
