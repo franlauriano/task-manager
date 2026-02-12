@@ -27,7 +27,7 @@ Este projeto segue uma arquitetura em camadas (Layered Architecture) com separa�
 │                  (Use Cases / Application)                  │
 ├─────────────────────────────────────────────────────────────┤
 │  • Orquestração de regras de negócio                        │
-│  • Coordenação entre entidades e repositórios                │
+│  • Coordenação entre entidades e repositórios               │
 │  • Validações de aplicação                                  │
 │  • Configurações de domínio (paginação, limites)            │
 └─────────────────────────────────────────────────────────────┘
@@ -45,7 +45,7 @@ Este projeto segue uma arquitetura em camadas (Layered Architecture) com separa�
                             │
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                  CAMADA DE REPOSITÓRIO                     │
+│                  CAMADA DE REPOSITÓRIO                      │
 │                (Repository / Data Access)                   │
 ├─────────────────────────────────────────────────────────────┤
 │  • Interfaces de persistência                               │
@@ -59,8 +59,8 @@ Este projeto segue uma arquitetura em camadas (Layered Architecture) com separa�
 │                CAMADA DE INFRAESTRUTURA                     │
 │                (Cross-cutting Concerns)                     │
 ├─────────────────────────────────────────────────────────────┤
-│  • Database (Conexão PostgreSQL)                           │
-│  • Cache (Redis)                                           │
+│  • Database (Conexão PostgreSQL)                            │
+│  • Cache (Redis)                                            │
 │  • HTTP Utilities                                           │
 │  • Logger                                                   │
 │  • Server                                                   │
@@ -86,39 +86,6 @@ Este projeto segue uma arquitetura em camadas (Layered Architecture) com separa�
 │                      BANCO DE DADOS                         │
 │                    PostgreSQL                               │
 └─────────────────────────────────────────────────────────────┘
-```
-
-### Fluxo de Dados
-
-```
-HTTP Request
-    │
-    ▼
-[Router] → Define rotas e aplica middlewares (logger de requests em JSON, etc.)
-    │
-    ▼
-[Middleware] → Valida Content-Type (quando exigido), gerencia transações de BD
-    │
-    ▼
-[Handler - Controller] → Valida entrada, converte DTOs para entidades
-    │
-    ▼
-[UseCase] → Orquestra regras de negócio, coordena operações
-    │
-    ▼
-[Entity] → Validações de domínio e regras básicas
-    │
-    ▼
-[Repository] → Interface de persistência
-    │
-    ▼
-[Repository Implementation] → Executa operações no banco de dados
-    │
-    ▼
-[Database] → PostgreSQL via GORM
-    │
-    ▼
-HTTP Response
 ```
 
 ## Tecnologias e Ferramentas
@@ -359,11 +326,6 @@ task-manager/  # Raiz do projeto
 - Todos os imports internos usam o prefixo `taskmanager/internal/...`
 - Exemplo: `taskmanager/internal/transport`, `taskmanager/internal/usecase/task`, `taskmanager/internal/entity/task`, `taskmanager/internal/repository/task`
 
-**Padrão de Dependências:**
-- Handlers importam `internal/usecase/*` para casos de uso
-- Handlers importam `internal/entity/*` apenas para tipos (quando necessário)
-- Handlers não importam `internal/repository/*` diretamente
-
 ### 2. Camada de Casos de Uso (`internal/usecase/`)
 
 **Responsabilidades:**
@@ -387,11 +349,6 @@ task-manager/  # Raiz do projeto
   - `ListPaginated()`: Listagem com paginação
   - Configuração: `config.go` com `Configuration` e `LoadConfig()` para limites de paginação
 
-**Padrão de Dependências:**
-- Importa `internal/entity/*` para entidades
-- Importa `internal/repository/*` para persistência
-- Não importa `internal/transport` ou `internal/platform` diretamente
-
 ### 3. Camada de Entidades (`internal/entity/`)
 
 **Responsabilidades:**
@@ -414,7 +371,6 @@ task-manager/  # Raiz do projeto
   - Hooks GORM: `BeforeCreate()` (UUID v7), `AfterFind()` (normalização UTC)
 
 **Padrão:**
-- Entidades são puras, sem dependências de infraestrutura
 - Validações focadas em regras de domínio
 - Uso de GORM apenas para hooks e tags de mapeamento
 
@@ -460,11 +416,7 @@ task-manager/  # Raiz do projeto
 - **logger/**: Sistema de logs estruturados
 - **errors/**: Erros customizados da aplicação
 - **server/**: Inicialização do servidor HTTP
-- **testing/**: Infraestrutura de testes genérica e reutilizável
-  - **testenv/**: Environment unificado para setup de testes (DB, HTTP, Venom). Servidor HTTP via `net/http/httptest` (interno). `RunAPISuite`.
-  - **dbtest/**: Container PostgreSQL (testcontainers com otimizações de performance), fixtures, cleanup, SetupDBWithTransaction/SetupDBWithoutTransaction (transaction.go)
-  - **assert/**: Helper de comparação de erros (`CompareErrors()` que retorna diff string)
-  - **venomtest/**: Runner para suites Venom; usado via testenv com `WithAPITest` e `env.RunAPISuite(t, suitePath)`
+- **testing/**: Infraestrutura de testes genérica e reutilizável (testenv, dbtest, redistest, assert, venomtest). Ver [Infraestrutura de Testes](#4-infraestrutura-de-testes-go)
 
 ### 6. Camada de Configuração (`internal/config/`)
 
@@ -568,11 +520,7 @@ task-manager/  # Raiz do projeto
 4. **Use Case Pattern**: Casos de uso orquestram a lógica de negócio
 5. **DTO Pattern**: Transferência de dados entre camadas (Transport ↔ Entity)
 6. **Dependency Injection**: Via interfaces e contexto (repositórios injetáveis)
-7. **Dependency Rule**: Camadas internas não dependem de camadas externas
-   - Entity não depende de nada
-   - UseCase depende apenas de Entity e Repository
-   - Repository depende apenas de Entity
-   - Transport depende de UseCase e Entity
+7. **Dependency Rule**: Ver [Regra de Dependências](#regra-de-dependências-clean-architecture)
 8. **Transaction Management**: Middleware para gerenciar transações
 9. **Soft Delete**: Exclusão lógica de registros
 10. **UUID v7**: Identificadores únicos ordenáveis por tempo (gerados no código Go via hooks `BeforeCreate` do GORM, não no banco de dados)
@@ -632,32 +580,108 @@ Entity (mais interna)
 
 ```mermaid
 flowchart TB
-    subgraph Unit [Unitário]
-        entity_test[entity/*/*_test.go]
-        usecase_test[usecase/*/*_test.go]
-        mock[Mocks de Repository]
-    end
-    subgraph Integ [Integração Persist]
-        persist_test[repository/*/persist_test.go]
-        dbtest[dbtest + Testcontainers]
-    end
-    subgraph API [Testes de API]
-        integration_yml[api_test/*.yml]
-        venomtest[venomtest.Runner]
-    end
-    entity_test --> entity_test
-    usecase_test --> mock
-    persist_test --> dbtest
-    integration_yml --> venomtest
+    Transport["🌐 API / E2E<br/>transport/*_handler_test.go<br/>• Full Stack (DB + Redis + HTTP)<br/>• Venom YAML"]
+
+    UseCase["🧪 UseCase<br/>usecase/*/*_test.go<br/>• Mocks de Repository + Cache<br/>• Sem DB real"]
+
+    Repository["🔗 Integração<br/>repository/*/persist_test.go<br/>• PostgreSQL Real (Testcontainers)<br/>• Transações + Fixtures"]
+
+    Entity["🧪 Entity<br/>entity/*/*_test.go<br/>• Sem deps<br/>• Validação + State Machine"]
+
+    Transport -->|depende de| UseCase
+    Transport -->|depende de| Repository
+    UseCase -->|depende de| Entity
+    Repository -->|depende de| Entity
 ```
 
 ### 2. Execução e Convenções
 
 - **Build tags**: `//go:build test` em testes que usam DB/containers. `go test -tags=test ./...` para suite completa; sem tag para unitários leves (ex. `entity/task/task_test.go`).
-- **Boas práticas**: table-driven, `t.Run()` por caso, `t.Helper()` em helpers, `t.Cleanup()` para cleanup.
 - **YAML vs Go para testes de API**:
   - **Preferir YAML** (maior parte dos testes) — simples, documentação viva, manutenção por QA/devs
   - **Go** — lógica complexa que YAML não suporta bem, compartilhar estado com código Go
+- **Boas práticas**: table-driven, `t.Run()` por caso, `t.Helper()` em helpers, `t.Cleanup()` para cleanup.
+
+#### Ciclo de vida: t.Run, t.Helper, t.Cleanup
+
+| Função | Papel |
+|--------|--------|
+| `t.Run(name, fn)` | Subteste com `*testing.T` próprio. Permite rodar subsets (`-run TestX/Y`) e isolar falhas. |
+| `t.Helper()` | Falhas apontam para o **chamador**, não para o helper (ex: `task_handler_test.go:99` em vez de `environment.go:78`). |
+| `t.Cleanup(fn)` | Executa `fn` quando o `t` **que o registou** terminar. Ordem: **LIFO**. |
+
+**Escopo do cleanup:** Se `testenv.Setup(t)` recebe o `t` do teste pai, o cleanup (ex: `server.Close()`) roda só quando o teste pai termina — após todos os subtestes. Se `dbtest.SetupDBWithTransaction(t)` recebe o `t` do subteste, o rollback roda quando aquele subteste termina.
+
+**Isolamento por camada (workflow):**
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│  TestXxx(t)  —  t é o *testing.T do teste pai                            │
+└──────────────────────────────────────────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────-────┐
+│  testenv.Setup(t, ...)  — recebe o t PAI                                 │
+│                                                                          │
+│  • [transport]  httptest.NewServer() → t.Cleanup(server.Close)           │
+│  • [repository] configura conexão DB                                     │
+│  • [usecase]    salva originalPersist := taskRepo.Persist()              │
+│                                                                          │
+│  ⚠️  Cleanups ficam na fila do t PAI — não executam aqui.                │
+└────────────────────────────────────────────────────────────────────────-─┘
+                                     │
+                                     ▼
+                   ┌─────────────────┴──────────────────┐
+                   │         for _, tc := range tests   │
+                   └─────────────────┬──────────────────┘
+                                     │
+        ┌────────────────────────────┼────────────────────────────┐
+        │                            │                            │
+        ▼                            ▼                            ▼
+┌────────────────────┐   ┌────────────────────┐   ┌────────────────────┐
+│ t.Run("caso A",    │   │ t.Run("caso B",    │   │ t.Run("caso C",    │
+│  func(t *testing.T)│   │  func(t *testing.T)│   │  func(t *testing.T)│
+│                    │   │                    │   │                    │
+│ Recebe t NOVO      │   │ Recebe t NOVO      │   │ Recebe t NOVO      │
+│ (subteste)         │   │ (subteste)         │   │ (subteste)         │
+│                    │   │                    │   │                    │
+│ Isolamento:        │   │                    │   │                    │
+│ • [transport]      │   │ (idem ao caso A)   │   │ (idem ao caso A)   │
+│   resetMinimal()   │   │                    │   │                    │
+│   TRUNCATE+fixtures│   │                    │   │                    │
+│   +FlushRedis.     │   │                    │   │                    │
+│   Middleware faz   │   │                    │   │                    │
+│   COMMIT (real).   │   │                    │   │                    │
+│ • [repository]     │   │                    │   │                    │
+│   SetupDBWithTx(t) │   │                    │   │                    │
+│   → t.Cleanup(     │   │                    │   │                    │
+│     Rollback)      │   │                    │   │                    │
+│   Dados nunca      │   │                    │   │                    │
+│   persistem.       │   │                    │   │                    │
+│ • [usecase]        │   │                    │   │                    │
+│   defer SetPersist │   │                    │   │                    │
+│   (original)       │   │                    │   │                    │
+│                    │   │                    │   │                    │
+│ SUBTESTE TERMINA   │   │ SUBTESTE TERMINA   │   │ SUBTESTE TERMINA   │
+│ → cleanup/defer    │   │ → cleanup/defer    │   │ → cleanup/defer    │
+│   do subteste      │   │   do subteste      │   │   do subteste      │
+│   executa          │   │   executa          │   │   executa          │
+└────────────────────┘   └────────────────────┘   └────────────────────┘
+        │                            │                            │
+        └────────────────────────────┼────────────────────────────┘
+                                     │
+                       Todos os subtestes terminaram
+                                     │
+                                     ▼
+┌──────────────────────────────────────────────────────────────────────────┐
+│  TestXxx está terminando                                                 │
+│                                                                          │
+│  ► Go executa os t.Cleanup() do t PAI (ordem inversa — LIFO)             │
+│  ► [transport] server.Close()                                            │
+│  ► [repository/usecase] cleanup do testenv                               │
+└──────────────────────────────────────────────────────────────────────────┘
+```
+
 
 ### 3. Dados de Teste
 
@@ -665,32 +689,6 @@ flowchart TB
 
 - **Seed** (`db/seed/`): Dados para desenvolvimento e demonstração. `make seed` roda `populate.sql` no Postgres via Docker (depende de `migrate`).
 - **Fixtures** (`db/fixtures/`): Dados para testes. Carregado via `dbtest.LoadFixtures()` ou `dbtest.ResetWithFixtures()` (TRUNCATE + INSERT). Novas fixtures podem ser criadas em `db/fixtures/` (ex. `pagination.sql`) e referenciadas por nome.
-
-#### Isolamento entre testes
-
-**Testes de repository** — transação com rollback automático (dados nunca persistem):
-
-```go
-t.Run(tt.name, func(t *testing.T) {
-    ctx := dbtest.SetupDBWithTransaction(t, tt.ctx)
-    // BEGIN transaction → operações → t.Cleanup → ROLLBACK
-    err := p.Create(ctx, task)
-})
-```
-
-**Testes de transport** — TRUNCATE + fixtures + flush Redis entre subtestes. O middleware comita transações em caso de sucesso (comportamento real da API), então dados persistem e o estado é resetado:
-
-```go
-resetWithMinimalData := func() {
-    dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
-    env.FlushRedis()  // Limpa cache para isolamento entre subtestes
-}
-
-t.Run(tc.name, func(t *testing.T) {
-    resetWithMinimalData()            // TRUNCATE + INSERT fixtures + flush Redis
-    env.RunAPISuite(t, tc.suitePath)  // HTTP request → middleware commit → dados persistem
-})
-```
 
 ### 4. Infraestrutura de Testes (Go)
 
@@ -720,6 +718,14 @@ resetWithMinimalData := func() {
 - **Transações**: `SetupDBWithTransaction(t, ctx)` — retorna ctx com transação anexada (rollback via `t.Cleanup()`). Preserva valores já existentes em ctx; se ctx for nil, usa `context.Background()`. Alternativa sem transação: `SetupDBWithoutTransaction(t, ctx)`.
 - **Fixtures**: `LoadFixtures(db, dir, file)` e `ResetWithFixtures(db, dir, file)` (TRUNCATE + INSERT)
 - **Cleanup**: `CleanDatabase()` — TRUNCATE em todas as tabelas
+- **Options**: `WithImage(image)` para customizar a imagem Docker (default: PostgreSQL 18 Alpine), `WithMigrations(dir)` para rodar migrações no startup do container
+
+#### redistest — Redis testing
+
+- **Container**: Redis via Testcontainers com `SetupRedis()` e `TeardownRedis()`
+- **Client**: `Client()` retorna `*redis.Client` conectado ao container
+- **Flush**: `FlushAll()` limpa todas as chaves (chamado automaticamente via `t.Cleanup()` quando `t` é fornecido)
+- **Options**: `WithImage(image)` para customizar a imagem Docker (default: `redis:8-alpine`)
 
 #### venomtest — Runner Venom
 
@@ -775,7 +781,9 @@ func TestMain(m *testing.M) {
 
 Os testes recebem os containers via `testenv.WithDatabase(databaseTest)` e `testenv.WithRedis(redisTest)`. Se não houver container no `TestMain`, use `WithNewDatabase(...)` ou `WithNewRedis(...)` para criar novos.
 
-#### Paralelismo entre pacotes
+#### Paralelismo
+
+**Decisão de design:** `t.Parallel()` não é usado dentro dos pacotes — testes compartilham um único container PostgreSQL/Redis (via `TestMain`) e estado global de mocks (`SetPersist()`), o que causaria data races. O paralelismo ocorre apenas **entre pacotes**.
 
 O `go test` compila cada pacote em um **binário separado** (processo independente). Pacotes rodando em paralelo possuem memória isolada e containers Docker independentes — cada `TestMain` cria seu container PostgreSQL com porta aleatória. Paralelismo controlado via flag `-p` (padrão: `GOMAXPROCS`).
 
@@ -786,9 +794,13 @@ go test ./internal/repository/task/... ./internal/repository/team/... ./internal
 │ Processo 1 (PID 12345)  │  │ Processo 2 (PID 12346)  │  │ Processo 3 (PID 12347)  │
 │ repository/task         │  │ repository/team         │  │ transport               │
 │                         │  │                         │  │                         │
-│ Container A             │  │ Container B             │  │ Container C             │
+│ Container A             │  │ Container C             │  │ Container D             │
 │ postgres:18-alpine      │  │ postgres:18-alpine      │  │ postgres:18-alpine      │
 │ porta 55432             │  │ porta 55489             │  │ porta 55501             │
+│                         │  │                         │  │                         │
+│ Container B             │  │                         │  │ Container E             │
+│ redis:8-alpine          │  │                         │  │ redis:8-alpine          │
+│ porta 55433             │  │                         │  │ porta 55502             │
 └─────────────────────────┘  └─────────────────────────┘  └─────────────────────────┘
          ▲                            ▲                            ▲
          └── Sem referência cruzada ──┴── Isolamento total ────────┘
