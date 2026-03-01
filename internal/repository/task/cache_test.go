@@ -28,7 +28,7 @@ func Test_cachedDatasource_ListPaginated(t *testing.T) {
 
 	resetWithMinimalData := func() {
 		env.FlushRedis()
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
+		dbtest.ResetWithFixtures(env.DB(), paths.FixtureDir(), "tasks_minimal.sql")
 	}
 
 	statusTodo := task.StatusTodo
@@ -183,8 +183,8 @@ func Test_cachedDatasource_ListPaginated(t *testing.T) {
 			"Cache hit - returns cached data instead of querying database",
 			func() {
 				env.FlushRedis()
-				dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
-				_ = cache.Set(context.Background(), env.Redis, listCacheKey(nil, 1, 10), &task.ListTasks{
+				dbtest.ResetWithFixtures(env.DB(), paths.FixtureDir(), "tasks_minimal.sql")
+				_ = cache.Set(context.Background(), env.Redis(), listCacheKey(nil, 1, 10), &task.ListTasks{
 					Page:       1,
 					Limit:      10,
 					TotalItems: 999,
@@ -204,14 +204,14 @@ func Test_cachedDatasource_ListPaginated(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithoutTransaction(t, tt.ctx)
+				ctx = dbtest.SetupDBWithoutTransaction(t, tt.ctx, env.DBConnector())
 			}
 
 			if tt.setup != nil {
 				tt.setup()
 			}
 
-			cached := NewCachedPersist(&datasource{}, env.Redis, 5*time.Minute)
+			cached := NewCachedPersist(&datasource{}, env.Redis(), 5*time.Minute)
 			got, err := cached.ListPaginated(ctx, tt.statusFilter, tt.page, tt.limit)
 			if diff := assert.CompareErrors(err, tt.wantErr); diff != "" {
 				t.Errorf("cachedDatasource.ListPaginated() error diff: %s", diff)
@@ -234,9 +234,9 @@ func Test_cachedDatasource_Create(t *testing.T) {
 
 	populateCacheAndReset := func() {
 		env.FlushRedis()
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
-		_ = cache.Set(context.Background(), env.Redis, listCacheKey(nil, 1, 10), &task.ListTasks{TotalItems: 14}, 5*time.Minute)
-		_ = cache.Set(context.Background(), env.Redis, listCacheKey(&statusTodo, 1, 10), &task.ListTasks{TotalItems: 5}, 5*time.Minute)
+		dbtest.ResetWithFixtures(env.DB(), paths.FixtureDir(), "tasks_minimal.sql")
+		_ = cache.Set(context.Background(), env.Redis(), listCacheKey(nil, 1, 10), &task.ListTasks{TotalItems: 14}, 5*time.Minute)
+		_ = cache.Set(context.Background(), env.Redis(), listCacheKey(&statusTodo, 1, 10), &task.ListTasks{TotalItems: 5}, 5*time.Minute)
 	}
 
 	tests := []struct {
@@ -262,14 +262,14 @@ func Test_cachedDatasource_Create(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithoutTransaction(t, tt.ctx)
+				ctx = dbtest.SetupDBWithoutTransaction(t, tt.ctx, env.DBConnector())
 			}
 
 			if tt.setup != nil {
 				tt.setup()
 			}
 
-			cached := NewCachedPersist(&datasource{}, env.Redis, 5*time.Minute)
+			cached := NewCachedPersist(&datasource{}, env.Redis(), 5*time.Minute)
 			err := cached.Create(ctx, tt.task)
 			if diff := assert.CompareErrors(err, tt.wantErr); diff != "" {
 				t.Errorf("cachedDatasource.Create() error diff: %s", diff)
@@ -279,8 +279,8 @@ func Test_cachedDatasource_Create(t *testing.T) {
 			if tt.wantErr == nil {
 				keyAll := listCacheKey(nil, 1, 10)
 				keyTodo := listCacheKey(&statusTodo, 1, 10)
-				afterAll, _ := cache.Get[task.ListTasks](ctx, env.Redis, keyAll)
-				afterTodo, _ := cache.Get[task.ListTasks](ctx, env.Redis, keyTodo)
+				afterAll, _ := cache.Get[task.ListTasks](ctx, env.Redis(), keyAll)
+				afterTodo, _ := cache.Get[task.ListTasks](ctx, env.Redis(), keyTodo)
 				if afterAll != nil {
 					t.Error("expected 'all' cache entry to be invalidated after Create")
 				}
@@ -300,8 +300,8 @@ func Test_cachedDatasource_Update(t *testing.T) {
 
 	populateCacheAndReset := func() {
 		env.FlushRedis()
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
-		_ = cache.Set(context.Background(), env.Redis, listCacheKey(nil, 1, 10), &task.ListTasks{TotalItems: 14}, 5*time.Minute)
+		dbtest.ResetWithFixtures(env.DB(), paths.FixtureDir(), "tasks_minimal.sql")
+		_ = cache.Set(context.Background(), env.Redis(), listCacheKey(nil, 1, 10), &task.ListTasks{TotalItems: 14}, 5*time.Minute)
 	}
 
 	existingTaskUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
@@ -342,14 +342,14 @@ func Test_cachedDatasource_Update(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithoutTransaction(t, tt.ctx)
+				ctx = dbtest.SetupDBWithoutTransaction(t, tt.ctx, env.DBConnector())
 			}
 
 			if tt.setup != nil {
 				tt.setup()
 			}
 
-			cached := NewCachedPersist(&datasource{}, env.Redis, 5*time.Minute)
+			cached := NewCachedPersist(&datasource{}, env.Redis(), 5*time.Minute)
 			err := cached.Update(ctx, tt.taskUUID, tt.task)
 			if diff := assert.CompareErrors(err, tt.wantErr); diff != "" {
 				t.Errorf("cachedDatasource.Update() error diff: %s", diff)
@@ -357,7 +357,7 @@ func Test_cachedDatasource_Update(t *testing.T) {
 			}
 
 			key := listCacheKey(nil, 1, 10)
-			after, _ := cache.Get[task.ListTasks](ctx, env.Redis, key)
+			after, _ := cache.Get[task.ListTasks](ctx, env.Redis(), key)
 			if tt.wantErr == nil && after != nil {
 				t.Error("expected list cache to be invalidated after successful Update")
 			}
@@ -376,8 +376,8 @@ func Test_cachedDatasource_Delete(t *testing.T) {
 
 	populateCacheAndReset := func() {
 		env.FlushRedis()
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
-		_ = cache.Set(context.Background(), env.Redis, listCacheKey(nil, 1, 10), &task.ListTasks{TotalItems: 14}, 5*time.Minute)
+		dbtest.ResetWithFixtures(env.DB(), paths.FixtureDir(), "tasks_minimal.sql")
+		_ = cache.Set(context.Background(), env.Redis(), listCacheKey(nil, 1, 10), &task.ListTasks{TotalItems: 14}, 5*time.Minute)
 	}
 
 	existingTaskUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
@@ -408,14 +408,14 @@ func Test_cachedDatasource_Delete(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithoutTransaction(t, tt.ctx)
+				ctx = dbtest.SetupDBWithoutTransaction(t, tt.ctx, env.DBConnector())
 			}
 
 			if tt.setup != nil {
 				tt.setup()
 			}
 
-			cached := NewCachedPersist(&datasource{}, env.Redis, 5*time.Minute)
+			cached := NewCachedPersist(&datasource{}, env.Redis(), 5*time.Minute)
 			err := cached.Delete(ctx, tt.taskUUID)
 			if diff := assert.CompareErrors(err, tt.wantErr); diff != "" {
 				t.Errorf("cachedDatasource.Delete() error diff: %s", diff)
@@ -423,7 +423,7 @@ func Test_cachedDatasource_Delete(t *testing.T) {
 			}
 
 			key := listCacheKey(nil, 1, 10)
-			after, _ := cache.Get[task.ListTasks](ctx, env.Redis, key)
+			after, _ := cache.Get[task.ListTasks](ctx, env.Redis(), key)
 			if tt.wantErr == nil && after != nil {
 				t.Error("expected list cache to be invalidated after successful Delete")
 			}
@@ -442,8 +442,8 @@ func Test_cachedDatasource_UpdateStatus(t *testing.T) {
 
 	populateCacheAndReset := func() {
 		env.FlushRedis()
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
-		_ = cache.Set(context.Background(), env.Redis, listCacheKey(nil, 1, 10), &task.ListTasks{TotalItems: 14}, 5*time.Minute)
+		dbtest.ResetWithFixtures(env.DB(), paths.FixtureDir(), "tasks_minimal.sql")
+		_ = cache.Set(context.Background(), env.Redis(), listCacheKey(nil, 1, 10), &task.ListTasks{TotalItems: 14}, 5*time.Minute)
 	}
 
 	existingTaskUUID := uuid.MustParse("123e4567-e89b-12d3-a456-426614174000")
@@ -481,14 +481,14 @@ func Test_cachedDatasource_UpdateStatus(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithoutTransaction(t, tt.ctx)
+				ctx = dbtest.SetupDBWithoutTransaction(t, tt.ctx, env.DBConnector())
 			}
 
 			if tt.setup != nil {
 				tt.setup()
 			}
 
-			cached := NewCachedPersist(&datasource{}, env.Redis, 5*time.Minute)
+			cached := NewCachedPersist(&datasource{}, env.Redis(), 5*time.Minute)
 			err := cached.UpdateStatus(ctx, tt.taskUUID, tt.updates)
 			if diff := assert.CompareErrors(err, tt.wantErr); diff != "" {
 				t.Errorf("cachedDatasource.UpdateStatus() error diff: %s", diff)
@@ -496,7 +496,7 @@ func Test_cachedDatasource_UpdateStatus(t *testing.T) {
 			}
 
 			key := listCacheKey(nil, 1, 10)
-			after, _ := cache.Get[task.ListTasks](ctx, env.Redis, key)
+			after, _ := cache.Get[task.ListTasks](ctx, env.Redis(), key)
 			if tt.wantErr == nil && after != nil {
 				t.Error("expected list cache to be invalidated after successful UpdateStatus")
 			}
@@ -515,7 +515,7 @@ func Test_cachedDatasource_RetrieveByUUID(t *testing.T) {
 
 	resetWithMinimalData := func() {
 		env.FlushRedis()
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
+		dbtest.ResetWithFixtures(env.DB(), paths.FixtureDir(), "tasks_minimal.sql")
 	}
 
 	tests := []struct {
@@ -557,14 +557,14 @@ func Test_cachedDatasource_RetrieveByUUID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithoutTransaction(t, tt.ctx)
+				ctx = dbtest.SetupDBWithoutTransaction(t, tt.ctx, env.DBConnector())
 			}
 
 			if tt.setup != nil {
 				tt.setup()
 			}
 
-			cached := NewCachedPersist(&datasource{}, env.Redis, 5*time.Minute)
+			cached := NewCachedPersist(&datasource{}, env.Redis(), 5*time.Minute)
 			got, err := cached.RetrieveByUUID(ctx, tt.taskUUID)
 			if diff := assert.CompareErrors(err, tt.wantErr); diff != "" {
 				t.Errorf("cachedDatasource.RetrieveByUUID() error diff: %s", diff)
@@ -585,7 +585,7 @@ func Test_cachedDatasource_ListByTeamID(t *testing.T) {
 
 	resetWithMinimalData := func() {
 		env.FlushRedis()
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
+		dbtest.ResetWithFixtures(env.DB(), paths.FixtureDir(), "tasks_minimal.sql")
 	}
 
 	teamID3 := uint(3)
@@ -659,14 +659,14 @@ func Test_cachedDatasource_ListByTeamID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithoutTransaction(t, tt.ctx)
+				ctx = dbtest.SetupDBWithoutTransaction(t, tt.ctx, env.DBConnector())
 			}
 
 			if tt.setup != nil {
 				tt.setup()
 			}
 
-			cached := NewCachedPersist(&datasource{}, env.Redis, 5*time.Minute)
+			cached := NewCachedPersist(&datasource{}, env.Redis(), 5*time.Minute)
 			got, err := cached.ListByTeamID(ctx, tt.teamID)
 			if diff := assert.CompareErrors(err, tt.wantErr); diff != "" {
 				t.Errorf("cachedDatasource.ListByTeamID() error diff: %s", diff)

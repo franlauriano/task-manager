@@ -18,7 +18,7 @@ func TestCreateTeam(t *testing.T) {
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
 		testenv.WithRedis(redisTest),
-		testenv.WithHTTPServer(Routes()),
+		testenv.WithHTTPServer(Routes(dbConnector)),
 		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
 			venomtest.WithVerbose(1),
@@ -57,7 +57,7 @@ func TestListTeams(t *testing.T) {
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
 		testenv.WithRedis(redisTest),
-		testenv.WithHTTPServer(Routes()),
+		testenv.WithHTTPServer(Routes(dbConnector)),
 		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
 			venomtest.WithVerbose(1),
@@ -92,7 +92,7 @@ func TestRetrieveTeam(t *testing.T) {
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
 		testenv.WithRedis(redisTest),
-		testenv.WithHTTPServer(Routes()),
+		testenv.WithHTTPServer(Routes(dbConnector)),
 		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
 			venomtest.WithVerbose(1),
@@ -129,7 +129,7 @@ func TestAssociateTaskToTeam(t *testing.T) {
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
 		testenv.WithRedis(redisTest),
-		testenv.WithHTTPServer(Routes()),
+		testenv.WithHTTPServer(Routes(dbConnector)),
 		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
 			venomtest.WithVerbose(1),
@@ -167,7 +167,7 @@ func TestDisassociateTaskFromTeam(t *testing.T) {
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
 		testenv.WithRedis(redisTest),
-		testenv.WithHTTPServer(Routes()),
+		testenv.WithHTTPServer(Routes(dbConnector)),
 		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
 			venomtest.WithVerbose(1),

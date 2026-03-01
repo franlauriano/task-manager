@@ -3,6 +3,7 @@ package transport
 import (
 	"net/http"
 
+	"taskmanager/internal/platform/database"
 	"taskmanager/internal/transport/middleware"
 
 	"github.com/go-chi/chi/v5"
@@ -10,24 +11,31 @@ import (
 )
 
 // Routes defines the routes for the application
-func Routes() http.Handler {
+func Routes(dbConnector database.Connector) http.Handler {
 	r := chi.NewRouter()
 	r.Use(chimw.RequestLogger(middleware.NewJSONLogFormatter(nil)))
+	r.Get("/healthcheck", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+
+	dbTx := middleware.DatabaseWithTransaction(dbConnector)
+	dbNoTx := middleware.DatabaseWithoutTransaction(dbConnector)
+
 	r.Route("/api", func(r chi.Router) {
 		// Task routes
-		r.With(middleware.RequireContentTypeJSON).Post("/tasks", middleware.DatabaseWithTransaction(CreateTask))
-		r.Get("/tasks/{uuid}", middleware.DatabaseWithoutTransaction(RetrieveByUUID))
-		r.With(middleware.RequireContentTypeJSON).Put("/tasks/{uuid}", middleware.DatabaseWithTransaction(UpdateTask))
-		r.With(middleware.RequireContentTypeJSON).Delete("/tasks/{uuid}", middleware.DatabaseWithTransaction(DeleteTask))
-		r.Get("/tasks", middleware.DatabaseWithoutTransaction(ListTasks))
-		r.With(middleware.RequireContentTypeJSON).Post("/tasks/{uuid}/status", middleware.DatabaseWithTransaction(UpdateTaskStatus))
+		r.With(middleware.RequireContentTypeJSON).Post("/tasks", dbTx(CreateTask))
+		r.Get("/tasks/{uuid}", dbNoTx(RetrieveByUUID))
+		r.With(middleware.RequireContentTypeJSON).Put("/tasks/{uuid}", dbTx(UpdateTask))
+		r.With(middleware.RequireContentTypeJSON).Delete("/tasks/{uuid}", dbTx(DeleteTask))
+		r.Get("/tasks", dbNoTx(ListTasks))
+		r.With(middleware.RequireContentTypeJSON).Post("/tasks/{uuid}/status", dbTx(UpdateTaskStatus))
 
 		// Team routes
-		r.With(middleware.RequireContentTypeJSON).Post("/teams", middleware.DatabaseWithTransaction(CreateTeam))
-		r.Get("/teams", middleware.DatabaseWithoutTransaction(ListTeams))
-		r.Get("/teams/{uuid}", middleware.DatabaseWithoutTransaction(RetrieveTeamByUUID))
-		r.With(middleware.RequireContentTypeJSON).Post("/teams/{uuid}/tasks", middleware.DatabaseWithTransaction(AssociateTaskToTeam))
-		r.With(middleware.RequireContentTypeJSON).Delete("/teams/{uuid}/tasks/{task_uuid}", middleware.DatabaseWithTransaction(DisassociateTaskFromTeam))
+		r.With(middleware.RequireContentTypeJSON).Post("/teams", dbTx(CreateTeam))
+		r.Get("/teams", dbNoTx(ListTeams))
+		r.Get("/teams/{uuid}", dbNoTx(RetrieveTeamByUUID))
+		r.With(middleware.RequireContentTypeJSON).Post("/teams/{uuid}/tasks", dbTx(AssociateTaskToTeam))
+		r.With(middleware.RequireContentTypeJSON).Delete("/teams/{uuid}/tasks/{task_uuid}", dbTx(DisassociateTaskFromTeam))
 	})
 	return r
 }

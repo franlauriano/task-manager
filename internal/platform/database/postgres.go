@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
-	"sync"
-	"sync/atomic"
 	"time"
 
 	"gorm.io/driver/postgres"
@@ -27,10 +25,6 @@ const (
 )
 
 var (
-	// db stores the single *gorm.DB connection atomically and thread-safe.
-	db atomic.Pointer[gorm.DB]
-	// dbMu protects write operations to db to prevent race conditions.
-	dbMu sync.Mutex
 	// ErrContextDatabase is returned when the context is without database.
 	ErrContextDatabase = errors.New("context without database")
 	// ErrDBNotFound is returned when the database connection is not set.
@@ -53,10 +47,10 @@ type Configuration struct {
 	ConnMaxLifetimeSeconds int    `toml:"conn_max_lifetime_seconds"`
 }
 
-// Open opens a new database connection and stores it globally.
-func Open(config Configuration) error {
+// Open opens a new database connection and returns a Connector.
+func Open(config Configuration) (Connector, error) {
 	if err := validateConfig(config); err != nil {
-		return err
+		return nil, err
 	}
 	sslMode := config.SSLMode
 	if sslMode == "" {
@@ -74,7 +68,7 @@ func Open(config Configuration) error {
 		Logger: logger.Default.LogMode(debugLevel),
 	})
 	if err != nil {
-		return fmt.Errorf("could not open database: %w", err)
+		return nil, fmt.Errorf("could not open database: %w", err)
 	}
 
 	sqlDB, err := newConn.DB()
@@ -82,92 +76,8 @@ func Open(config Configuration) error {
 		applyPoolConfig(sqlDB, config)
 	}
 
-	dbMu.Lock()
-	defer dbMu.Unlock()
-	db.Store(newConn)
-
 	slog.Info("Database connection opened")
-	return nil
-}
-
-// DB returns the current database connection. It is safe for concurrent use.
-func DB() (*gorm.DB, error) {
-	conn := db.Load()
-	if conn == nil {
-		return nil, ErrDBNotFound
-	}
-	return conn, nil
-}
-
-// SetDB stores a database connection.
-// This function is thread-safe and protects against race conditions.
-func SetDB(conn *gorm.DB) {
-	dbMu.Lock()
-	defer dbMu.Unlock()
-	db.Store(conn)
-}
-
-// InjectDBsIntoContext injects the database connection into the context.
-func InjectDBsIntoContext(ctx context.Context, options ...Option) (context.Context, error) {
-	err := error(nil)
-	for _, opt := range options {
-		ctx, err = opt(ctx)
-		if err != nil {
-			return nil, err
-		}
-	}
-	return ctx, nil
-}
-
-// Commit commits the transaction in the context.
-func Commit(ctx context.Context) error {
-	conn, err := dbFromContext(ctx, databaseWithTransactionKey)
-	if err != nil {
-		return err
-	}
-	return conn.Commit().Error
-}
-
-// Rollback rolls back the transaction in the context.
-func Rollback(ctx context.Context) error {
-	conn, err := dbFromContext(ctx, databaseWithTransactionKey)
-	if err != nil {
-		return err
-	}
-	return conn.Rollback().Error
-}
-
-// Close closes the database connection.
-// This function is thread-safe and protects against race conditions.
-func Close() error {
-	dbMu.Lock()
-	defer dbMu.Unlock()
-	conn := db.Load()
-	if conn == nil {
-		return nil
-	}
-	sqlDB, err := conn.DB()
-	if err != nil {
-		return err
-	}
-	sqlDB.Close()
-	db.Store(nil)
-	slog.Info("Database connection closed")
-	return nil
-}
-
-// DBFromContext returns the database connection from the context.
-// It first checks for a non-transactional connection, then a transactional one.
-func DBFromContext(ctx context.Context) (*gorm.DB, error) {
-	conn, err := dbFromContext(ctx, databaseWithoutTransactionKey)
-	if err == nil {
-		return conn, nil
-	}
-	conn, err = dbFromContext(ctx, databaseWithTransactionKey)
-	if err == nil {
-		return conn, nil
-	}
-	return nil, err
+	return NewConnector(newConn), nil
 }
 
 // dbFromContext extracts the database connection from the context under the given key.

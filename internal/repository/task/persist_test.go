@@ -26,7 +26,7 @@ func Test_datasource_Create(t *testing.T) {
 	)
 
 	resetWithMinimalData := func() {
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
+		dbtest.ResetWithFixtures(env.DB(), paths.FixtureDir(), "tasks_minimal.sql")
 	}
 
 	tests := []struct {
@@ -67,7 +67,7 @@ func Test_datasource_Create(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx)
+				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx, env.DBConnector())
 			}
 
 			if tt.setup != nil {
@@ -90,7 +90,7 @@ func Test_datasource_RetrieveByUUID(t *testing.T) {
 	)
 
 	resetWithMinimalData := func() {
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
+		dbtest.ResetWithFixtures(env.DB(), paths.FixtureDir(), "tasks_minimal.sql")
 	}
 
 	tests := []struct {
@@ -144,7 +144,7 @@ func Test_datasource_RetrieveByUUID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx)
+				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx, env.DBConnector())
 			}
 
 			if tt.setup != nil {
@@ -170,7 +170,7 @@ func Test_datasource_Update(t *testing.T) {
 	)
 
 	resetWithMinimalData := func() {
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
+		dbtest.ResetWithFixtures(env.DB(), paths.FixtureDir(), "tasks_minimal.sql")
 	}
 
 	tests := []struct {
@@ -226,7 +226,7 @@ func Test_datasource_Update(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx)
+				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx, env.DBConnector())
 			}
 
 			if tt.setup != nil {
@@ -249,7 +249,7 @@ func Test_datasource_Delete(t *testing.T) {
 	)
 
 	resetWithMinimalData := func() {
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
+		dbtest.ResetWithFixtures(env.DB(), paths.FixtureDir(), "tasks_minimal.sql")
 	}
 
 	tests := []struct {
@@ -289,7 +289,7 @@ func Test_datasource_Delete(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx)
+				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx, env.DBConnector())
 			}
 
 			if tt.setup != nil {
@@ -312,7 +312,7 @@ func Test_datasource_ListPaginated(t *testing.T) {
 	)
 
 	resetWithMinimalData := func() {
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
+		dbtest.ResetWithFixtures(env.DB(), paths.FixtureDir(), "tasks_minimal.sql")
 	}
 
 	statusTodo := task.StatusTodo
@@ -1096,7 +1096,7 @@ func Test_datasource_ListPaginated(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx)
+				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx, env.DBConnector())
 			}
 
 			if tt.setup != nil {
@@ -1122,7 +1122,7 @@ func Test_datasource_UpdateStatus(t *testing.T) {
 	)
 
 	resetWithMinimalData := func() {
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
+		dbtest.ResetWithFixtures(env.DB(), paths.FixtureDir(), "tasks_minimal.sql")
 	}
 
 	tests := []struct {
@@ -1186,7 +1186,7 @@ func Test_datasource_UpdateStatus(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx)
+				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx, env.DBConnector())
 			}
 
 			if tt.setup != nil {
@@ -1208,7 +1208,7 @@ func Test_datasource_ListByTeamID(t *testing.T) {
 		testenv.WithDatabase(databaseTest),
 	)
 	resetWithMinimalData := func() {
-		dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
+		dbtest.ResetWithFixtures(env.DB(), paths.FixtureDir(), "tasks_minimal.sql")
 	}
 
 	teamID1 := uint(1)
@@ -1408,7 +1408,7 @@ func Test_datasource_ListByTeamID(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			ctx := tt.ctx
 			if tt.ctx != nil {
-				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx)
+				ctx = dbtest.SetupDBWithTransaction(t, tt.ctx, env.DBConnector())
 			}
 
 			if tt.setup != nil {

@@ -2,11 +2,12 @@ package task
 
 import (
 	"strings"
-	"taskmanager/internal/platform/errors"
 	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+
+	"taskmanager/internal/platform/errors"
 )
 
 type TaskStatus string
@@ -24,7 +25,7 @@ type Task struct {
 	UUID        uuid.UUID  `gorm:"type:uuid;uniqueIndex;not null" json:"-"`
 	Title       string     `gorm:"not null" json:"-"`
 	Description string     `gorm:"not null" json:"-"`
-	Status      TaskStatus `gorm:"type:varchar(20);not null;default:'todo'" json:"-"`
+	Status      TaskStatus `gorm:"type:varchar(20);not null;default:'to_do'" json:"-"`
 	FinishedAt  *time.Time `json:"-"`
 	StartedAt   *time.Time `json:"-"`
 	TeamID      *uint      `gorm:"index" json:"-"`

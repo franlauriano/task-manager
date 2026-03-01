@@ -45,9 +45,12 @@ func main() {
 	}
 
 	// Connect to database
-	database.Open(appConfig.Database)
+	dbConnector, err := database.Open(appConfig.Database)
+	if err != nil {
+		log.Fatal("Error on open database connection", "error", err)
+	}
 	defer func() {
-		if err := database.Close(); err != nil {
+		if err := dbConnector.Close(); err != nil {
 			log.Print("Error closing database:", err)
 		}
 	}()
@@ -72,5 +75,5 @@ func main() {
 
 	// Start http server
 	address := fmt.Sprintf("%s:%d", appConfig.Server.Host, appConfig.Server.Port)
-	server.ListenAndServe(address, transport.Routes())
+	server.ListenAndServe(address, transport.Routes(dbConnector))
 }

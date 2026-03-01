@@ -3,11 +3,11 @@ package team
 import (
 	"strings"
 
-	taskEntity "taskmanager/internal/entity/task"
-	errors "taskmanager/internal/platform/errors"
-
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+
+	taskEntity "taskmanager/internal/entity/task"
+	"taskmanager/internal/platform/errors"
 )
 
 // Team represents a team entity

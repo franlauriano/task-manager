@@ -40,6 +40,7 @@ Esta API permite gerenciar tarefas e equipes, com funcionalidades como:
 - **Cache**: Redis 8
 - **Configuração**: pelletier/go-toml/v2 (TOML parsing com expansão de variáveis de ambiente)
 - **Logging**: slog (structured logging)
+- **Frontend**: React 19, TypeScript, Vite, TanStack Query, React Router 7, Tailwind CSS 4
 - **Testes**: Go testing package, Testcontainers (PostgreSQL e Redis em testes) e Venom (testes de API)
 - **Containerização**: Docker Compose (postgres, redis, migrate)
 - **Migrações**: SQL direto (up/down)
@@ -140,6 +141,12 @@ make build
 
 A API estará disponível em `http://localhost:8090`
 
+### 5. Executar o frontend
+
+```bash
+make run-ui
+```
+
 ## Testes
 
 Os testes utilizam **Testcontainers** para subir PostgreSQL e Redis automaticamente. Não é necessário subir banco de dados nem Redis manualmente para executar os testes.
@@ -187,8 +194,10 @@ O projeto inclui um `Makefile` com os seguintes comandos:
 | `make seed` | Executa o seed (`db/seed/populate.sql`) via Docker; depende de `migrate` (requer postgres: `make run-docker` ou `make db-up`) |
 | `make run` | Executa a aplicação (sem live reload) |
 | `make run-dev` | Executa a aplicação com live reload (requer Air) |
+| `make run-ui` | Executa o frontend React (Vite dev server) |
 | `make test` | Executa testes unitários e de integração (usa Testcontainers) |
 | `make coverage` | Gera relatório de cobertura |
+| `make sync-rules` | Sincroniza regras entre `.ia/rules`, `.claude/rules` e `.cursor/rules` |
 
 ## Licença
 

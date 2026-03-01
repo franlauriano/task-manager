@@ -2,9 +2,10 @@ package http
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
-	"taskmanager/internal/platform/errors"
+	appErrors "taskmanager/internal/platform/errors"
 )
 
 // writeResponse marshals a response object and returns HTTP status code and body
@@ -21,13 +22,13 @@ func HandleErrorResponse(err error, resp any) (int, []byte) {
 	if err == nil {
 		return writeResponse(http.StatusOK, resp)
 	}
-	if validErr, ok := err.(*errors.ValidationErrors); ok {
+	if validErr, ok := err.(*appErrors.ValidationErrors); ok {
 		return writeResponse(http.StatusUnprocessableEntity, validErr)
 	}
-	if err == errors.ErrNotFound {
+	if errors.Is(err, appErrors.ErrNotFound) {
 		return writeResponse(http.StatusNotFound, nil)
 	}
-	if badReqErr, ok := err.(*errors.BadRequestError); ok {
+	if badReqErr, ok := err.(*appErrors.BadRequestError); ok {
 		return writeResponse(http.StatusBadRequest, badReqErr)
 	}
 	return writeResponse(http.StatusInternalServerError, nil)
@@ -35,7 +36,7 @@ func HandleErrorResponse(err error, resp any) (int, []byte) {
 
 // BadRequest returns a bad request error response with HTTP status code and body
 func BadRequest(message, field string) (int, []byte) {
-	resp := errors.BadRequestError{
+	resp := appErrors.BadRequestError{
 		Message: message,
 	}
 	if field != "" {

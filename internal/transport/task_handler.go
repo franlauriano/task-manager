@@ -102,7 +102,7 @@ func ListTasks(w http.ResponseWriter, r *http.Request) (int, []byte) {
 		}
 	}
 
-	limitParam := r.URL.Query().Get("limit")
+	limitParam := httputil.QueryParam(r, "limit")
 	limit := 0
 	if limitParam != "" {
 		if parsedLimit, err := strconv.Atoi(limitParam); err == nil {

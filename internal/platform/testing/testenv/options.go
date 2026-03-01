@@ -41,7 +41,7 @@ func WithNewRedis(opts ...redistest.Option) Option {
 	}
 }
 
-// WithHTTPServer enables an HTTP test server; the given handler is used to create it.
+// WithHTTPServer enables an HTTP test server with the given handler.
 func WithHTTPServer(handler http.Handler) Option {
 	return func(c *Config) {
 		c.needsHTTP = true

@@ -13,4 +13,4 @@ testcases:
             "status": "in_progress"
           }
         assertions:
-          - result.statuscode ShouldEqual 404
+          - result.statuscode ShouldEqual 415

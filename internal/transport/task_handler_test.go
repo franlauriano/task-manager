@@ -11,11 +11,6 @@ import (
 	"taskmanager/internal/platform/testing/venomtest"
 )
 
-func resetWithMinimalData(env *testenv.Environment) {
-	dbtest.ResetWithFixtures(env.DB, paths.FixtureDir(), "tasks_minimal.sql")
-	env.FlushRedis()
-}
-
 func TestCreateTask(t *testing.T) {
 	env := testenv.Setup(t,
 		testenv.WithDatabase(
@@ -23,7 +18,7 @@ func TestCreateTask(t *testing.T) {
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
 		testenv.WithRedis(redisTest),
-		testenv.WithHTTPServer(Routes()),
+		testenv.WithHTTPServer(Routes(dbConnector)),
 		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
 			venomtest.WithVerbose(1),
@@ -62,7 +57,7 @@ func TestUpdateTask(t *testing.T) {
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
 		testenv.WithRedis(redisTest),
-		testenv.WithHTTPServer(Routes()),
+		testenv.WithHTTPServer(Routes(dbConnector)),
 		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
 			venomtest.WithVerbose(1),
@@ -102,7 +97,7 @@ func TestDeleteTask(t *testing.T) {
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
 		testenv.WithRedis(redisTest),
-		testenv.WithHTTPServer(Routes()),
+		testenv.WithHTTPServer(Routes(dbConnector)),
 		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
 			venomtest.WithVerbose(1),
@@ -140,7 +135,7 @@ func TestRetrieveTask(t *testing.T) {
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
 		testenv.WithRedis(redisTest),
-		testenv.WithHTTPServer(Routes()),
+		testenv.WithHTTPServer(Routes(dbConnector)),
 		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
 			venomtest.WithVerbose(1),
@@ -177,7 +172,7 @@ func TestListTasks(t *testing.T) {
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
 		testenv.WithRedis(redisTest),
-		testenv.WithHTTPServer(Routes()),
+		testenv.WithHTTPServer(Routes(dbConnector)),
 		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
 			venomtest.WithVerbose(1),
@@ -215,7 +210,7 @@ func TestUpdateTaskStatus(t *testing.T) {
 			dbtest.WithMigrations(paths.MigrationDir()),
 		),
 		testenv.WithRedis(redisTest),
-		testenv.WithHTTPServer(Routes()),
+		testenv.WithHTTPServer(Routes(dbConnector)),
 		testenv.WithAPITest(
 			venomtest.WithSuiteRoot(paths.APITestDir()),
 			venomtest.WithVerbose(1),

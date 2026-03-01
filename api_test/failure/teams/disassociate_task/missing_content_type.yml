@@ -9,4 +9,4 @@ testcases:
         headers:
           Accept: "application/json"
         assertions:
-          - result.statuscode ShouldEqual 404
+          - result.statuscode ShouldEqual 415

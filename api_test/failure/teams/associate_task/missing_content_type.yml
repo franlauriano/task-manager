@@ -13,4 +13,4 @@ testcases:
             "task_uuid": "00000000-0000-0000-0000-000000000000"
           }
         assertions:
-          - result.statuscode ShouldEqual 404
+          - result.statuscode ShouldEqual 415

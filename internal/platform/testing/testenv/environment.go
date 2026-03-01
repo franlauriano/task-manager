@@ -5,24 +5,25 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"github.com/redis/go-redis/v9"
+	"gorm.io/gorm"
+
 	"taskmanager/internal/platform/database"
 	"taskmanager/internal/platform/testing/dbtest"
 	"taskmanager/internal/platform/testing/redistest"
 	"taskmanager/internal/platform/testing/venomtest"
-
-	"github.com/redis/go-redis/v9"
-	"gorm.io/gorm"
 )
 
 // Environment holds the full test environment state.
 // Can be used for both unit and integration tests.
 type Environment struct {
 	// Database
-	DB        *gorm.DB
-	container *dbtest.Container
+	db          *gorm.DB
+	dbConnector database.Connector
+	container   *dbtest.Container
 
 	// Redis
-	Redis          *redis.Client
+	redis          *redis.Client
 	containerRedis *redistest.Container
 
 	// HTTP Server
@@ -93,9 +94,24 @@ func Setup(t *testing.T, opts ...Option) *Environment {
 	return env
 }
 
+// DB returns the database connection.
 func (e *Environment) RunAPISuite(t *testing.T, suitePath string) {
 	t.Helper()
 	e.venomRunner.Run(t, suitePath)
+}
+
+func (e *Environment) DB() *gorm.DB {
+	return e.db
+}
+
+// dbConnector returns the database Provider created for this environment.
+func (e *Environment) DBConnector() database.Connector {
+	return e.dbConnector
+}
+
+// Redis returns the Redis client.
+func (e *Environment) Redis() *redis.Client {
+	return e.redis
 }
 
 // setupDatabase configures the PostgreSQL container and connection.
@@ -115,9 +131,8 @@ func (e *Environment) setupDatabase(t *testing.T) {
 	}
 
 	e.container = container
-	e.DB = container.DB()
-
-	database.SetDB(e.DB)
+	e.db = container.DB()
+	e.dbConnector = database.NewConnector(e.db)
 }
 
 // setupRedis configures the Redis container and client.
@@ -137,7 +152,7 @@ func (e *Environment) setupRedis(t *testing.T) {
 	}
 
 	e.containerRedis = container
-	e.Redis = container.Client()
+	e.redis = container.Client()
 }
 
 // FlushRedis removes all keys from the Redis instance.

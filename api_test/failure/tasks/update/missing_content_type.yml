@@ -14,4 +14,4 @@ testcases:
             "description": "Updated Description"
           }
         assertions:
-          - result.statuscode ShouldEqual 404
+          - result.statuscode ShouldEqual 415

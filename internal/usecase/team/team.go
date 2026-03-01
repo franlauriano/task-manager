@@ -2,15 +2,15 @@ package team
 
 import (
 	"context"
+	"errors"
 	"strings"
 
+	"github.com/google/uuid"
+
 	teamEntity "taskmanager/internal/entity/team"
-	errors "taskmanager/internal/platform/errors"
-	errs "taskmanager/internal/platform/errors"
+	apperrors "taskmanager/internal/platform/errors"
 	taskRepo "taskmanager/internal/repository/task"
 	teamRepo "taskmanager/internal/repository/team"
-
-	"github.com/google/uuid"
 )
 
 // Create creates a new team with business rules
@@ -83,7 +83,7 @@ func validateAssociateTask(ctx context.Context, teamUUID, taskUUID uuid.UUID) (*
 	}
 
 	if taskTeamID != nil && *taskTeamID != team.ID {
-		return nil, &errors.ValidationErrors{Errors: []errors.ValidationError{
+		return nil, &apperrors.ValidationErrors{Errors: []apperrors.ValidationError{
 			{Field: "task", Message: "task is already associated with another team"},
 		}}
 	}
@@ -99,7 +99,7 @@ func validateDisassociateTask(ctx context.Context, teamUUID, taskUUID uuid.UUID)
 	}
 
 	if taskTeamID == nil || *taskTeamID != team.ID {
-		return &errors.ValidationErrors{Errors: []errors.ValidationError{
+		return &apperrors.ValidationErrors{Errors: []apperrors.ValidationError{
 			{Field: "task", Message: "task is not associated with this team"},
 		}}
 	}
@@ -111,8 +111,8 @@ func validateDisassociateTask(ctx context.Context, teamUUID, taskUUID uuid.UUID)
 func validateTeamAndTask(ctx context.Context, teamUUID, taskUUID uuid.UUID) (*teamEntity.Team, *uint, error) {
 	team, err := teamRepo.Persist().RetrieveByUUID(ctx, teamUUID)
 	if err != nil {
-		if err == errs.ErrNotFound {
-			return nil, nil, &errors.ValidationErrors{Errors: []errors.ValidationError{
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return nil, nil, &apperrors.ValidationErrors{Errors: []apperrors.ValidationError{
 				{Field: "team", Message: "team not found"},
 			}}
 		}
@@ -121,8 +121,8 @@ func validateTeamAndTask(ctx context.Context, teamUUID, taskUUID uuid.UUID) (*te
 
 	taskTeamID, err := teamRepo.Persist().RetrieveTaskTeamID(ctx, taskUUID)
 	if err != nil {
-		if err == errs.ErrNotFound {
-			return nil, nil, &errors.ValidationErrors{Errors: []errors.ValidationError{
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return nil, nil, &apperrors.ValidationErrors{Errors: []apperrors.ValidationError{
 				{Field: "task", Message: "task not found"},
 			}}
 		}

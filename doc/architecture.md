@@ -102,6 +102,7 @@ Este projeto segue uma arquitetura em camadas (Layered Architecture) com separa�
   - Testcontainers-go (containers PostgreSQL para testes)
   - Venom (testes de API em YAML)
   - google/go-cmp (comparações estruturais)
+- **Frontend**: React 19, TypeScript, Vite 7, Tailwind CSS 4, TanStack Query 5, React Router 7, Lucide React, Zod 4
 - **Containerização**: Docker Compose (serviços: `postgres`, `redis`, `migrate`; testes usam testcontainers)
 - **Comandos (Makefile)**: `db-up`, `db-down`, `redis-up`, `redis-down`, `run-docker`, `migrate`, `migrate-down`, `seed`, `run`, `run-dev`, `test`, `coverage`. O target `run-docker` sobe PostgreSQL e Redis juntos. O target `seed` executa `db/seed/populate.sql` no Postgres via Docker (psql) e depende de `migrate`.
 - **Migrações**: SQL direto (up/down)
@@ -210,8 +211,9 @@ task-manager/  # Raiz do projeto
 │   │
 │   ├── 📂 platform/                          # Plataforma e Infraestrutura
 │   │   ├── 📂 database/                      # Gerenciamento de banco de dados
+│   │   │   ├── connector.go                  # Interface Connector (DB, InjectDBsIntoContext, Commit, Rollback, Close) e DBFromContext
 │   │   │   ├── options.go                    # Option, WithDBTransaction, WithDBWithoutTransaction (para InjectDBsIntoContext)
-│   │   │   └── postgres.go                   # Conexão PostgreSQL via GORM
+│   │   │   └── postgres.go                   # Configuração e abertura de conexão PostgreSQL via GORM; retorna Connector
 │   │   │
 │   │   ├── 📂 cache/                         # Cache Redis
 │   │   │   ├── cache.go                      # Interface e configuração de cache
@@ -293,6 +295,24 @@ task-manager/  # Raiz do projeto
 │           │   ├── bad_request.yml           # HTTP 400
 │           │   └── validation_errors.yml     # HTTP 422
 │           └── ...                           # (outros: retrieve, associate, etc.)
+│
+├── 📂 ui/                                    # Frontend React (Vite, TypeScript)
+│   ├── App.tsx                               # Componente raiz
+│   ├── main.tsx                              # Entry point React
+│   ├── index.css                             # Estilos globais
+│   ├── index.html                            # HTML base (Vite)
+│   ├── vite.config.ts                        # Configuração Vite
+│   ├── eslint.config.js                      # Configuração ESLint
+│   ├── package.json                          # Dependências Node
+│   ├── tsconfig.json                         # Config TypeScript
+│   ├── 📂 api/                              # Chamadas HTTP à API
+│   │   └── healthcheck.ts                   # Health check endpoint
+│   ├── 📂 hooks/                            # Custom hooks (TanStack Query)
+│   │   └── useHealthcheck.ts                # Hook de health check
+│   ├── 📂 pages/                            # Componentes de página
+│   │   └── HealthCheck.tsx                  # Página de health check
+│   └── 📂 public/                           # Assets estáticos
+│       └── vite.svg                         # Logo Vite
 │
 ├── go.mod                                    # Dependências Go
 ├── go.sum                                    # Checksums das dependências
@@ -411,6 +431,10 @@ task-manager/  # Raiz do projeto
 
 **Componentes:**
 - **database/**: Gerenciamento de conexão PostgreSQL
+  - Interface `Connector`: abstração central de acesso ao banco — `DB()`, `InjectDBsIntoContext(ctx, ...Option)`, `Commit(ctx)`, `Rollback(ctx)`, `Close()`
+  - `DBFromContext(ctx)`: função pública para extrair `*gorm.DB` do contexto
+  - `Open(config)` retorna `Connector` (conexão única, sem registry de aliases)
+  - `Options`: `WithDBTransaction()`, `WithDBWithoutTransaction()`
 - **cache/**: Conexão e abstração de cache Redis
 - **http/**: Parsing de requests e formatação de responses
 - **logger/**: Sistema de logs estruturados
@@ -474,10 +498,10 @@ task-manager/  # Raiz do projeto
    │
    ▼
 3. [internal/transport/route.go] → Roteia para POST /api/tasks; RequireContentTypeJSON valida
-   │   Content-Type (404 se inválido); DatabaseWithTransaction(CreateTask) encadeia transação e handler
+   │   Content-Type (415 se inválido); DatabaseWithTransaction(CreateTask) encadeia transação e handler
    │
    ▼
-4. [internal/transport/middleware/database.go] → DatabaseWithTransaction: chama InjectDBsIntoContext(r.Context(), database.WithDBTransaction()) para colocar a transação no contexto, em seguida chama CreateTask
+4. [internal/transport/middleware/database.go] → DatabaseWithTransaction(dbConnector) retorna middleware; chama dbConnector.InjectDBsIntoContext(r.Context(), database.WithDBTransaction()) para colocar a transação no contexto, em seguida chama CreateTask
    │
    ▼
 5. [internal/transport/task_handler.go] → CreateTask()

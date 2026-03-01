@@ -14,6 +14,7 @@ import (
 	"taskmanager/internal/platform/logger"
 	"taskmanager/internal/platform/testing/dbtest"
 	"taskmanager/internal/platform/testing/redistest"
+	"taskmanager/internal/platform/testing/testenv"
 	taskRepo "taskmanager/internal/repository/task"
 	"taskmanager/internal/testing/configtest"
 	"taskmanager/internal/usecase/task"
@@ -22,6 +23,7 @@ import (
 
 var databaseTest *dbtest.Container
 var redisTest *redistest.Container
+var dbConnector database.Connector
 
 func TestMain(m *testing.M) {
 	os.Exit(func(m *testing.M) int {
@@ -73,6 +75,9 @@ func TestMain(m *testing.M) {
 			}
 		}()
 
+		// Create database connector for Routes()
+		dbConnector = database.NewConnector(databaseTest.DB())
+
 		// Wire cache-aside decorator (mirrors production wiring in cmd/main.go)
 		cache.SetClient(redisTest.Client())
 		taskRepo.SetPersist(taskRepo.NewCachedPersist(
@@ -83,4 +88,9 @@ func TestMain(m *testing.M) {
 
 		return m.Run()
 	}(m))
+}
+
+func resetWithMinimalData(env *testenv.Environment) {
+	dbtest.ResetWithFixtures(env.DB(), paths.FixtureDir(), "tasks_minimal.sql")
+	env.FlushRedis()
 }
