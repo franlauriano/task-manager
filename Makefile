@@ -9,9 +9,12 @@ CONFIG_FILE := $(ETC_DIR)/config.toml
 CONFIG_EXAMPLE := $(ETC_DIR)/config.toml.example
 ENV_EXAMPLE := $(ETC_DIR)/.env.example
 
-CURSOR_RULES_DIR := .cursor/rules
-CLAUDE_RULES_DIR := .claude/rules
-IA_RULES_DIR := .ia/rules
+CURSOR_DIR := .cursor
+CLAUDE_DIR := .claude
+IA_DIR := .ia
+IA_RULES_DIR := rules
+IA_COMMANDS_DIR := commands
+IA_AGENTS_DIR := agents
 
 # Auto-initialize configuration files
 $(shell if [ ! -f $(ENV_FILE) ] && [ -f $(ENV_EXAMPLE) ]; then cp $(ENV_EXAMPLE) $(ENV_FILE); fi)
@@ -23,7 +26,7 @@ ifneq (,$(wildcard $(ENV_FILE)))
     export
 endif
 
-.PHONY: help deps build clean db-up db-down redis-up redis-down run-docker migrate migrate-down seed run run-dev run-ui test coverage sync-rules
+.PHONY: help deps build clean db-up db-down redis-up redis-down run-docker migrate migrate-down seed seed-reset run run-dev run-ui test coverage setup-ia
 
 help: ## Show help
 	@awk 'BEGIN {FS = ":.*?## "}; /^[a-zA-Z_-]+:.*?## / {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -64,6 +67,9 @@ migrate-down: ## Rollback application migrations
 seed: migrate ## Run database seed (requires postgres: make db-up; migrate: make migrate)
 	@. $(ENV_FILE) && cat db/seed/populate.sql | docker-compose exec -T postgres psql -U $$DATABASE_USER -d $$DATABASE_NAME
 
+seed-reset: ## Clear seed data (requires postgres: make db-up)
+	@. $(ENV_FILE) && echo "TRUNCATE tasks, teams RESTART IDENTITY CASCADE;" | docker-compose exec -T postgres psql -U $$DATABASE_USER -d $$DATABASE_NAME
+
 run: deps ## Run application (no live reload)
 	go run cmd/main.go
 
@@ -87,12 +93,19 @@ coverage: ## Generate coverage report
 			echo "File: $(CURDIR)/$(VAR_DIR)/coverage.html"; \
 		fi
 
-sync-rules: ## Sync rules between .claude and .cursor
-	@mkdir -p $(CLAUDE_RULES_DIR) $(CURSOR_RULES_DIR)
+setup-ia: ## Sync rules, agents and commands between .claude and .cursor
+	@mkdir -p $(CURSOR_DIR)/$(IA_RULES_DIR)
+	@mkdir -p $(CLAUDE_DIR)/$(IA_RULES_DIR)
 	@echo "Criando links simbólicos..."
-	@for file in $(wildcard $(IA_RULES_DIR)/*.md); do \
+	@for file in $(wildcard $(IA_DIR)/$(IA_RULES_DIR)/*.md); do \
 		base=$$(basename $$file .md); \
-		ln -sf ../../$$file $(CLAUDE_RULES_DIR)/$$base.md; \
-		ln -sf ../../$$file $(CURSOR_RULES_DIR)/$$base.mdc; \
+		ln -sf ../../$$file $(CLAUDE_DIR)/$(IA_RULES_DIR)/$$base.md; \
+		ln -sf ../../$$file $(CURSOR_DIR)/$(IA_RULES_DIR)/$$base.mdc; \
 	done
+
+	@ln -sfn ../$(IA_DIR)/$(IA_AGENTS_DIR) $(CURSOR_DIR)/$(IA_AGENTS_DIR)
+	@ln -sfn ../$(IA_DIR)/$(IA_COMMANDS_DIR) $(CURSOR_DIR)/$(IA_COMMANDS_DIR)
+	@ln -sfn ../$(IA_DIR)/$(IA_AGENTS_DIR) $(CLAUDE_DIR)/$(IA_AGENTS_DIR)
+	@ln -sfn ../$(IA_DIR)/$(IA_COMMANDS_DIR) $(CLAUDE_DIR)/$(IA_COMMANDS_DIR)
+
 	@echo "Arquivos sincronizados em .claude e .cursor"

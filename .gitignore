@@ -14,6 +14,6 @@ etc/config.toml
 # Binary files
 bin/*
 
-tasks
 .claude
 .cursor
+tasks-ia

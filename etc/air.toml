@@ -17,7 +17,7 @@ tmp_dir = "tmp"
   # Watch these file extensions
   include_ext = ["go", "toml", "env"]
   # Exclude these directories
-  exclude_dir = ["var", "api_test", ".git", "vendor", "tmp", "db"]
+  exclude_dir = ["var", "api_test", ".git", "vendor", "tmp", "db", "ui"]
   # Exclude these files
   exclude_file = []
   # Delay before restarting (in milliseconds)
