@@ -26,10 +26,26 @@
 
 ## Testes da Tarefa
 
-- [ ] Testes de unidade
-- [ ] Testes de integração
+### Cenários Obrigatórios
+- [ ] Happy path (fluxo principal com dados válidos)
+- [ ] Validações de entrada (campos obrigatórios, limites de tamanho)
+- [ ] Erros esperados (not found, conflito de estado, dados inválidos)
+
+### Cenários Adicionais (obrigatórios quando aplicáveis à tarefa)
+> **Regra:** se o cenário é aplicável à funcionalidade sendo implementada, ele **deve** ser coberto por testes. Avaliar quais se aplicam e incluir todos os pertinentes.
+
+- [ ] Valores limite (string vazia, max length 255, zero, negativos)
+- [ ] Paginação extrema (page=0, page=99999, limit=0)
+- [ ] Caracteres especiais e Unicode
+- [ ] Múltiplos fatores combinados (ex: filtro + paginação + valor limite)
+- [ ] Transições de estado inválidas (se aplicável)
+
+### NÃO testar
+- Funções privadas — serão testadas indiretamente pelas funções públicas que as utilizam
+- Comportamento de frameworks/libs de terceiros — assume-se que já foram testados pelos mantenedores
 
 <critical>SEMPRE CRIE E EXECUTE OS TESTES DA TAREFA ANTES DE CONSIDERÁ-LA FINALIZADA</critical>
+<critical>Cada teste deve ter um "porquê" claro — se não consegue justificar o valor do teste, não o crie</critical>
 
 ## Arquivos relevantes
 - [Arquivos relevantes desta tarefa]

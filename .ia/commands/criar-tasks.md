@@ -26,12 +26,14 @@ A funcionalidade em que você trabalhará é identificada por este slug:
 - Organizar sequenciamento
 - **Cada tarefa deve ser um entregável funcional**
 - **Todas as tarefas devem ter o seu próprio conjunto de testes de unidade e integração**
+- **Ao detalhar testes, garantir cobertura de cenários relevantes**: fluxo principal, valores limite, erros esperados (validação, not found), e combinações não-óbvias.
+- **Não listar testes para código trivial**: funções privadas (serão testadas indiretamente pelas funções públicas que as utilizam), e comportamento de frameworks/libs de terceiros (assume-se que já foram testados pelos mantenedores)
 
 3. **Gerar Arquivos de Tarefas Individuais**
 
 - Criar arquivo para cada tarefa principal
 - Detalhar subtarefas e critérios de sucesso
-- Detalhar os testes de unidade e integração
+- Detalhar cenários de teste específicos usando o template de `task-template.md` (seção "Testes da Tarefa" com cenários obrigatórios, edge cases e o que NÃO testar)
 
 ## Diretrizes de Criação de Tarefas
 

@@ -90,15 +90,22 @@ Review the code against ALL of the following criteria, based on the project's es
 - Custom hooks prefixed with "use"
 - All components must have tests
 
-#### Tests (unit-test.md, api-test.md, e2e-test.md, test-infrastructure.md)
+#### Tests (unit-test.md, api-test.md, e2e-test.md, test-strategy.md)
 - Go: built-in testing package + testcontainers + google/go-cmp
 - API: Venom YAML tests in `api_test/`
 - Tests must be independent
 - Follow AAA/GWT pattern (Arrange, Act, Assert)
 - One behavior per test
-- Full coverage of written code
 - Consistent and complete expectations
 - Clear, descriptive test names
+
+#### Test Quality (critical — review with same rigor as production code)
+- **Redundancy check**: Flag tests that cover the exact same scenario (same input, same assertion, different name)
+- **Behavior vs implementation**: Tests should validate input→output, NOT internal implementation details. Flag tests tightly coupled to implementation (e.g., verifying internal method call order)
+- **Trivial test detection**: Flag as 🟢 MINOR tests for private functions (they are already covered indirectly by public function tests) and tests for framework/third-party library behavior (assume they are already tested by their maintainers). These add maintenance cost without quality value
+- **Edge case coverage**: Verify that critical edge cases are covered — especially: empty/nil inputs, boundary values (0, max length), invalid state transitions, not-found scenarios
+- **Layer-appropriate testing**: Entity tests should focus on validation/business rules; usecase tests on orchestration/error handling; transport tests on parsing/status codes/response format
+- **Coverage by value, not by volume**: Prefer fewer high-value tests over many low-value tests. A test suite with 10 meaningful tests is better than 30 tests where 20 are trivial
 
 ### Step 4: Classify Issues
 

@@ -52,10 +52,18 @@ Riscos/Desafios: [Riscos ou desafios identificados]
 3. [Passos adicionais conforme necessário]
 ```
 
-### 5. Revisão
+### 5. Escopo de Testes
+
+Todas as camadas afetadas pela task devem ter testes implementados conforme as rules de teste do projeto.
+
+**Fora de escopo de teste:**
+- Funções privadas — serão testadas indiretamente pelas funções públicas que as utilizam
+- Comportamento de frameworks/libs de terceiros — assume-se que já foram testados pelos mantenedores
+
+### 6. Revisão
 
 1. Execute o agente de review @task-reviewer
-2. Ajuste os problemas indicados
+2. Ajuste os problemas indicados (incluindo testes redundantes ou triviais flaggeados)
 3. Não finalize a tarefa até resolver
 
 <critical>NÃO PULE NENHUM PASSO</critical>

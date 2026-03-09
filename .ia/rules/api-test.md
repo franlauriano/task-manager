@@ -6,9 +6,11 @@ alwaysApply: false
 
 # Testes de API (Venom)
 
+Para pirâmide de testes, escopo por camada e critérios de valor, ver **test-strategy.md**.
+
 ## Onde fica a chamada
 
-Os testes Venom são executados em `internal/transport/*_handler_test.go`. Cada `TestXxx` usa `testenv.Setup` com `WithAPITest` e chama `env.RunAPISuite(t, suitePath)` para rodar os YAML. Um teste Go mapeia para uma ou mais suites YAML (ex: `TestCreateTask` → `success/tasks/create/basic.yml`). Para Testcontainers e testenv.Setup, ver **test-infrastructure.mdc**.
+Os testes Venom são executados em `internal/transport/*_handler_test.go`. Cada `TestXxx` usa `testenv.Setup` com `WithAPITest` e chama `env.RunAPISuite(t, suitePath)` para rodar os YAML. Um teste Go mapeia para uma ou mais suites YAML (ex: `TestCreateTask` → `success/tasks/create/basic.yml`). Para Testcontainers e testenv.Setup, ver **test-strategy.md**.
 
 ## Estrutura dos YAML
 

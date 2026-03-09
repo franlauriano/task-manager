@@ -56,4 +56,4 @@ Funções que retornam erro: usar `wantErr error` no struct de teste. **Não** u
 
 ---
 
-Para Testcontainers e testenv.Setup, ver **test-infrastructure.mdc**.
+Para escopo por camada, infraestrutura (Testcontainers, testenv) e critérios de valor, ver **test-strategy.md**.

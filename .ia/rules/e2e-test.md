@@ -6,6 +6,8 @@ alwaysApply: false
 
 # Testes E2E (Playwright)
 
+Para pirâmide de testes, escopo por camada e critérios de valor, ver **test-strategy.md**.
+
 ## Tecnologias
 
 - **Playwright** — E2E contra UI + API real (ver project-conventions para stack)
